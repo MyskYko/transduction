@@ -1,0 +1,3 @@
+[submodule "lib/nextbdd"]
+	path = lib/nextbdd
+	url = https://github.com/MyskYko/nextbdd.git
