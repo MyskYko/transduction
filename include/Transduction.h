@@ -10,16 +10,23 @@ using namespace NextBdd;
 
 #define Z 0 // TODO: fix this
 
+enum class PfState {none, cspf, mspf};
+
 class Transduction {
  public:
   void GenerateAig(aigman &aig) const;
 
-  Transduction(aigman const &aig, int nVerbose);
+  Transduction(aigman const &aig, int nVerbose, int nSortType);
   ~Transduction();
+
+  int Cspf(bool fSortRemove = false, int block = -1, int block_i0 = -1);
+  bool CspfDebug();
 
  private:
   int nVerbose;
+  int nSortType;
   int nObjsAlloc;
+  PfState state;
   std::vector<int> vPis;
   std::vector<int> vPos;
   std::list<int> vObjs;
@@ -37,14 +44,22 @@ class Transduction {
   void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = Z);
   void Disconnect(int i, int i0, unsigned j, bool fUpdate = true, bool fPfUpdate = true);
   int  Remove(int i, bool fPfUpdate = true);
+  unsigned FindFi(int i, int i0) const;
+  int Replace(int i, int f, bool fUpdate = true);
   void ImportAig(aigman const &aig);
 
   void Build(int i, std::vector<lit> &vFs_) const;
   void Build(bool fPfUpdate = true);
   bool BuildDebug();
   void RemoveConstOutputs();
+  bool CostCompare(int a, int b) const;
+  bool SortFis(int i);
 
-  inline lit LitFanin(int i, int j) const {
+  int RemoveRedundantFis(int i, int block_i0 = -1, unsigned j = 0);
+  void CalcG(int i);
+  int CalcC(int i);
+
+  inline lit LitFi(int i, int j) const {
     int i0 = vvFis[i][j] >> 1;
     bool c0 = vvFis[i][j] & 1;
     return man->LitNotCond(vFs[i0], c0);

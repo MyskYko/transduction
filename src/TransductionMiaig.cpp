@@ -78,7 +78,40 @@ int Transduction::Remove(int i, bool fPfUpdate) {
   return count;
 }
 
+unsigned Transduction::FindFi(int i, int i0) const {
+  for(unsigned j = 0; j < vvFis[i].size(); j++)
+    if((vvFis[i][j] >> 1) == i0)
+      return j;
+  abort();
+}
+int Transduction::Replace(int i, int f, bool fUpdate) {
+  if(nVerbose > 4)
+    cout << "\t\t\t\tReplace " << i << " by " << (f >> 1) << "(" << (f & 1) << ")" << endl;
+  assert(i != (f >> 1));
+  int count = 0;
+  for(unsigned j = 0; j < vvFos[i].size(); j++) {
+    int k = vvFos[i][j];
+    unsigned l = FindFi(k, i);
+    int fc = f ^ (vvFis[k][l] & 1);
+    if(find(vvFis[k].begin(), vvFis[k].end(), fc) != vvFis[k].end()) {
+      vvCs[k].erase(vvCs[k].begin() + l);
+      vvFis[k].erase(vvFis[k].begin() + l);
+      count++;
+    } else {
+      vvFis[k][l] = f ^ (vvFis[k][l] & 1);
+      vvFos[f >> 1].push_back(k);
+    }
+    if(fUpdate)
+      vUpdates[k] = true;
+  }
+  vvFos[i].clear();
+  vPfUpdates[f >> 1] = true;
+  return count + Remove(i);
+}
+
 void Transduction::ImportAig(aigman const &aig) {
+  if(nVerbose > 2)
+    cout << "\t\tImport aig" << endl;
   nObjsAlloc = aig.nObjs + aig.nPos;
   vvFis.resize(nObjsAlloc);
   vvFos.resize(nObjsAlloc);
