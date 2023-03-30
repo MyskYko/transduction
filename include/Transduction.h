@@ -18,9 +18,13 @@ class Transduction {
 
   Transduction(aigman const &aig, int nVerbose, int nSortType);
   ~Transduction();
+  bool BuildDebug();
 
-  int Cspf(bool fSortRemove = false, int block = -1, int block_i0 = -1);
+  int  Cspf(bool fSortRemove = false, int block = -1, int block_i0 = -1);
   bool CspfDebug();
+
+  int  Mspf(bool fSort = false, int block = -1, int block_i0 = -1);
+  bool MspfDebug();
 
  private:
   int nVerbose;
@@ -37,6 +41,7 @@ class Transduction {
   std::vector<std::vector<lit> > vvCs;
   std::vector<bool> vUpdates;
   std::vector<bool> vPfUpdates;
+  std::vector<bool> vFoConeShared;
   std::vector<lit> vPoFs;
   Man * man;
 
@@ -45,24 +50,45 @@ class Transduction {
   void Disconnect(int i, int i0, unsigned j, bool fUpdate = true, bool fPfUpdate = true);
   int  Remove(int i, bool fPfUpdate = true);
   unsigned FindFi(int i, int i0) const;
-  int Replace(int i, int f, bool fUpdate = true);
+  int  Replace(int i, int f, bool fUpdate = true);
+  int  ReplaceByConst(int i, bool c);
   void ImportAig(aigman const &aig);
 
   void Build(int i, std::vector<lit> &vFs_) const;
   void Build(bool fPfUpdate = true);
-  bool BuildDebug();
   void RemoveConstOutputs();
   bool CostCompare(int a, int b) const;
   bool SortFis(int i);
 
-  int RemoveRedundantFis(int i, int block_i0 = -1, unsigned j = 0);
+  int  RemoveRedundantFis(int i, int block_i0 = -1, unsigned j = 0);
   void CalcG(int i);
-  int CalcC(int i);
+  int  CalcC(int i);
+
+  bool IsFoConeShared_rec(std::vector<int> &vVisits, int i, int visitor) const;
+  bool IsFoConeShared(int i) const;
+  void BuildFoConeCompl(int i, std::vector<lit> &vPoFsCompl) const;
+  bool MspfCalcG(int i);
+  int  MspfCalcC(int i, int block_i0 = -1);
 
   inline lit LitFi(int i, int j) const {
     int i0 = vvFis[i][j] >> 1;
     bool c0 = vvFis[i][j] & 1;
     return man->LitNotCond(vFs[i0], c0);
+  }
+  inline lit LitFi(int i, int j, std::vector<lit> const &vFs_) const {
+    int i0 = vvFis[i][j] >> 1;
+    bool c0 = vvFis[i][j] & 1;
+    return man->LitNotCond(vFs_[i0], c0);
+  }
+  inline lit Xor(lit x, lit y) const {
+    lit f = man->And(x, man->LitNot(y));
+    man->IncRef(f);
+    lit g = man->And(man->LitNot(x), y);
+    man->IncRef(g);
+    lit r = man->Or(f, g);
+    man->DecRef(f);
+    man->DecRef(g);
+    return r;
   }
   inline void Update(lit &x, lit y) const {
     man->DecRef(x);
@@ -84,6 +110,17 @@ class Transduction {
     for(std::list<int>::const_iterator it = vObjs.begin(); it != vObjs.end(); it++)
       if(v[*it])
         return false;
+    return true;
+  }
+  inline bool Verify() const {
+    for(unsigned j = 0; j < vPos.size(); j++) {
+      lit x = Xor(LitFi(vPos[j], 0), vPoFs[j]);
+      man->IncRef(x);
+      Update(x, man->And(x, man->LitNot(vvCs[vPos[j]][0])));
+      man->DecRef(x);
+      if(!man->IsConst0(x))
+        return false;
+    }
     return true;
   }
 };

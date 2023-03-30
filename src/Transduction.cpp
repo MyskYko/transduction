@@ -18,9 +18,9 @@ Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType): nVer
   man->Reorder();
   man->TurnOffReo();
   RemoveConstOutputs();
-  vPoFs.resize(vPos.size());
+  vPoFs.resize(vPos.size(), Z);
   for(unsigned i = 0; i < vPos.size(); i++)
-    vPoFs[i] = LitFi(vPos[i], 0);
+    Update(vPoFs[i], LitFi(vPos[i], 0));
   state = PfState::none;
 }
 Transduction::~Transduction() {
@@ -28,31 +28,31 @@ Transduction::~Transduction() {
   DelVec(vGs);
   for(int i = 0; i < nObjsAlloc; i++)
     DelVec(vvCs[i]);
+  DelVec(vPoFs);
   assert(man->CountNodes() == (int)vPis.size() + 1);
   delete man;
 }
 
-void Transduction::Build(int i, vector<lit>& vFs_) const {
+void Transduction::Build(int i, vector<lit> &vFs_) const {
   if(nVerbose > 4)
     cout << "\t\t\t\tBuild " << i << endl;
   Update(vFs_[i], man->Const1());
   for(unsigned j = 0; j < vvFis[i].size(); j++)
-    Update(vFs_[i], man->And(vFs_[i], LitFi(i, j)));
+    Update(vFs_[i], man->And(vFs_[i], LitFi(i, j, vFs_)));
 }
 void Transduction::Build(bool fPfUpdate) {
   if(nVerbose > 3)
     cout << "\t\t\tBuild" << endl;
-  for(list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++) {
+  for(list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++)
     if(vUpdates[*it]) {
       lit x = vFs[*it];
       man->IncRef(x);
       Build(*it, vFs);
+      man->DecRef(x);
       if(x != vFs[*it])
         for(unsigned j = 0; j < vvFos[*it].size(); j++)
           vUpdates[vvFos[*it][j]] = true;
-      man->DecRef(x);
     }
-  }
   if(fPfUpdate)
     for(list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++)
       vPfUpdates[*it] = vPfUpdates[*it] || vUpdates[*it];

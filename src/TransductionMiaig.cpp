@@ -94,6 +94,7 @@ int Transduction::Replace(int i, int f, bool fUpdate) {
     unsigned l = FindFi(k, i);
     int fc = f ^ (vvFis[k][l] & 1);
     if(find(vvFis[k].begin(), vvFis[k].end(), fc) != vvFis[k].end()) {
+      man->DecRef(vvCs[k][l]);
       vvCs[k].erase(vvCs[k].begin() + l);
       vvFis[k].erase(vvFis[k].begin() + l);
       count++;
@@ -106,6 +107,29 @@ int Transduction::Replace(int i, int f, bool fUpdate) {
   }
   vvFos[i].clear();
   vPfUpdates[f >> 1] = true;
+  return count + Remove(i);
+}
+int Transduction::ReplaceByConst(int i, bool c) {
+  if(nVerbose > 4)
+    std::cout << "\t\t\t\tReplace " << i << " by " << c << std::endl;
+  int count = 0;
+  for(unsigned j = 0; j < vvFos[i].size(); j++) {
+    int k = vvFos[i][j];
+    unsigned l = FindFi(k, i);
+    bool fc = c ^ (vvFis[k][l] & 1);
+    man->DecRef(vvCs[k][l]);
+    vvCs[k].erase(vvCs[k].begin() + l);
+    vvFis[k].erase(vvFis[k].begin() + l);
+    if(fc) {
+      if(vvFis[k].size() == 1)
+        count += Replace(k, vvFis[k][0]);
+      else
+        vUpdates[k] = true;
+    } else
+      count += ReplaceByConst(k, 0);
+  }
+  count += vvFos[i].size();
+  vvFos[i].clear();
   return count + Remove(i);
 }
 

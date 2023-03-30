@@ -1,5 +1,4 @@
 #include <iostream>
-#include <map>
 #include <cassert>
 
 #include "Transduction.h"
@@ -17,6 +16,7 @@ int Transduction::RemoveRedundantFis(int i, int block_i0, unsigned j) {
         Update(x, man->And(x, LitFi(i, jj)));
     Update(x, man->Or(man->LitNot(x), vGs[i]));
     Update(x, man->Or(x, LitFi(i, j)));
+    man->DecRef(x);
     if(man->IsConst1(x)) {
       int i0 = vvFis[i][j] >> 1;
       if(nVerbose > 4)
@@ -24,7 +24,6 @@ int Transduction::RemoveRedundantFis(int i, int block_i0, unsigned j) {
       Disconnect(i, i0, j--);
       count++;
     }
-    man->DecRef(x);
   }
   return count;
 }
