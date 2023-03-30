@@ -31,6 +31,7 @@ void Transduction::Connect(int i, int f, bool fSort, bool fUpdate, lit c) {
   vvFos[i0].push_back(i);
   if(fUpdate)
     vUpdates[i] = true;
+  man->IncRef(c);
   vvCs[i].push_back(c);
   if(fSort && !vvFos[i].empty() && !vvFis[i0].empty()) {
     list<int>::iterator it = find(vObjs.begin(), vObjs.end(), i);
@@ -131,6 +132,23 @@ int Transduction::ReplaceByConst(int i, bool c) {
   count += vvFos[i].size();
   vvFos[i].clear();
   return count + Remove(i);
+}
+
+void Transduction::NewGate(int &pos) {
+  while(pos != nObjsAlloc && (!vvFis[pos].empty() || !vvFos[pos].empty()))
+    pos++;
+  if(nVerbose > 4)
+    std::cout << "\t\t\t\tCreate " << pos << std::endl;
+  if(pos == nObjsAlloc) {
+    nObjsAlloc++;
+    vvFis.resize(nObjsAlloc);
+    vvFos.resize(nObjsAlloc);
+    vFs.resize(nObjsAlloc, Z);
+    vGs.resize(nObjsAlloc, Z);
+    vvCs.resize(nObjsAlloc);
+    vUpdates.resize(nObjsAlloc);
+    vPfUpdates.resize(nObjsAlloc);
+  }
 }
 
 void Transduction::ImportAig(aigman const &aig) {

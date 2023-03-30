@@ -7,11 +7,11 @@
 using namespace std;
 
 Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType): nVerbose(nVerbose), nSortType(nSortType) {
-  ImportAig(aig);
   Param p;
   p.nGbc = 1;
   p.nReo = 4000;
   man = new Man(aig.nPis, p);
+  ImportAig(aig);
   for(unsigned i = 0; i < vPis.size(); i++)
     vFs[i + 1] = man->IthVar(i);
   Build(false);

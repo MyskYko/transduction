@@ -59,6 +59,9 @@ class Transduction: ManUtil {
   int  Mspf(bool fSort = false, int block = -1, int block_i0 = -1);
   bool MspfDebug();
 
+  int TrivialMerge();
+  int TrivialDecompose();
+
  private:
   int nVerbose;
   int nSortType;
@@ -84,6 +87,7 @@ class Transduction: ManUtil {
   unsigned FindFi(int i, int i0) const;
   int  Replace(int i, int f, bool fUpdate = true);
   int  ReplaceByConst(int i, bool c);
+  void NewGate(int &pos);
   void ImportAig(aigman const &aig);
 
   void Build(int i, std::vector<lit> &vFs_) const;
@@ -101,6 +105,9 @@ class Transduction: ManUtil {
   void BuildFoConeCompl(int i, std::vector<lit> &vPoFsCompl) const;
   bool MspfCalcG(int i);
   int  MspfCalcC(int i, int block_i0 = -1);
+
+  int TrivialMergeOne(int i);
+  int TrivialDecomposeOne(std::list<int>::iterator const &it, int &pos);
 
   inline lit LitFi(int i, int j) const {
     int i0 = vvFis[i][j] >> 1;
