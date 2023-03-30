@@ -112,14 +112,12 @@ int Transduction::Cspf(bool fSortRemove, int block, int block_i0) {
 bool Transduction::CspfDebug() {
   vector<lit> vGsOld;
   CopyVec(vGsOld, vGs);
-  vector<vector<lit> > vvCsOld(nObjsAlloc);
-  for(int i = 0; i < nObjsAlloc; i++)
-    CopyVec(vvCsOld[i], vvCs[i]);
+  vector<vector<lit> > vvCsOld;
+  CopyVec(vvCsOld, vvCs);
   state = PfState::none;
   Cspf();
   bool r = vGsOld == vGs && vvCsOld == vvCs;
   DelVec(vGsOld);
-  for(int i = 0; i < nObjsAlloc; i++)
-    DelVec(vvCsOld[i]);
+  DelVec(vvCsOld);
   return r;
 }

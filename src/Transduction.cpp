@@ -26,8 +26,7 @@ Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType): nVer
 Transduction::~Transduction() {
   DelVec(vFs);
   DelVec(vGs);
-  for(int i = 0; i < nObjsAlloc; i++)
-    DelVec(vvCs[i]);
+  DelVec(vvCs);
   DelVec(vPoFs);
   assert(man->CountNodes() == (int)vPis.size() + 1);
   delete man;

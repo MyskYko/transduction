@@ -12,7 +12,40 @@ using namespace NextBdd;
 
 enum class PfState {none, cspf, mspf};
 
-class Transduction {
+class ManUtil {
+protected:
+  Man *man;
+  inline void Update(lit &x, lit y) const {
+    man->DecRef(x);
+    x = y;
+    man->IncRef(x);
+  }
+  inline void DelVec(std::vector<lit> &v) const {
+    for(unsigned i = 0; i < v.size(); i++)
+      man->DecRef(v[i]);
+    v.clear();
+  }
+  inline void DelVec(std::vector<std::vector<lit> > &v) const {
+    for(unsigned i = 0; i < v.size(); i++)
+      DelVec(v[i]);
+    v.clear();
+  }
+  inline void CopyVec(std::vector<lit> &v, std::vector<lit> const &u) const {
+    DelVec(v);
+    v = u;
+    for(unsigned i = 0; i < v.size(); i++)
+      man->IncRef(v[i]);
+  }
+  inline void CopyVec(std::vector<std::vector<lit> > &v, std::vector<std::vector<lit> > const &u) const {
+    for(unsigned i = u.size(); i < v.size(); i++)
+      DelVec(v[i]);
+    v.resize(u.size());
+    for(unsigned i = 0; i < v.size(); i++)
+      CopyVec(v[i], u[i]);
+  }
+};
+
+class Transduction: ManUtil {
  public:
   void GenerateAig(aigman &aig) const;
 
@@ -43,7 +76,6 @@ class Transduction {
   std::vector<bool> vPfUpdates;
   std::vector<bool> vFoConeShared;
   std::vector<lit> vPoFs;
-  Man * man;
 
   void SortObjs_rec(std::list<int>::iterator const &it);
   void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = Z);
@@ -89,22 +121,6 @@ class Transduction {
     man->DecRef(f);
     man->DecRef(g);
     return r;
-  }
-  inline void Update(lit &x, lit y) const {
-    man->DecRef(x);
-    x = y;
-    man->IncRef(x);
-  }
-  inline void DelVec(std::vector<lit> &x) const {
-    for(unsigned i = 0; i < x.size(); i++)
-      man->DecRef(x[i]);
-    x.clear();
-  }
-  inline void CopyVec(std::vector<lit> &x, std::vector<lit> const &y) const {
-    DelVec(x);
-    x = y;
-    for(unsigned i = 0; i < x.size(); i++)
-      man->IncRef(x[i]);
   }
   inline bool AllFalse(std::vector<bool> const &v) const {
     for(std::list<int>::const_iterator it = vObjs.begin(); it != vObjs.end(); it++)
