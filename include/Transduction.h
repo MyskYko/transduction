@@ -123,9 +123,11 @@ class Transduction: ManUtil {
   unsigned FindFi(int i, int i0) const;
   int  Replace(int i, int f, bool fUpdate = true);
   int  ReplaceByConst(int i, bool c);
+  void NewGate(int &pos);
   void MarkFiCone_rec(std::vector<bool> &vMarks, int i) const;
   void MarkFoCone_rec(std::vector<bool> &vMarks, int i) const;
-  void NewGate(int &pos);
+  bool IsFoConeShared_rec(std::vector<int> &vVisits, int i, int visitor) const;
+  bool IsFoConeShared(int i) const;
   void ImportAig(aigman const &aig);
 
   void Build(int i, std::vector<lit> &vFs_) const;
@@ -138,8 +140,6 @@ class Transduction: ManUtil {
   void CalcG(int i);
   int  CalcC(int i);
 
-  bool IsFoConeShared_rec(std::vector<int> &vVisits, int i, int visitor) const;
-  bool IsFoConeShared(int i) const;
   void BuildFoConeCompl(int i, std::vector<lit> &vPoFsCompl) const;
   bool MspfCalcG(int i);
   int  MspfCalcC(int i, int block_i0 = -1);

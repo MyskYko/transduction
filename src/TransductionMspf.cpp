@@ -5,25 +5,6 @@
 
 using namespace std;
 
-bool Transduction::IsFoConeShared_rec(vector<int> &vVisits, int i, int visitor) const {
-  if(vVisits[i] == visitor)
-    return false;
-  if(vVisits[i])
-    return true;
-  vVisits[i] = visitor;
-  for(unsigned j = 0; j < vvFos[i].size(); j++)
-    if(IsFoConeShared_rec(vVisits, vvFos[i][j], visitor))
-      return true;
-  return false;
-}
-bool Transduction::IsFoConeShared(int i) const {
-  vector<int> vVisits(nObjsAlloc);
-  for(unsigned j = 0; j < vvFos[i].size(); j++)
-    if(IsFoConeShared_rec(vVisits, vvFos[i][j], j + 1))
-      return true;
-  return false;
-}
-
 void Transduction::BuildFoConeCompl(int i, vector<lit> &vPoFsCompl) const {
   if(nVerbose > 3)
     cout << "\t\t\tBuild with complemented " << i << endl;
