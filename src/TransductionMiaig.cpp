@@ -92,11 +92,11 @@ int Transduction::Remove(int i, bool fPfUpdate) {
   return count;
 }
 
-unsigned Transduction::FindFi(int i, int i0) const {
+int Transduction::FindFi(int i, int i0) const {
   for(unsigned j = 0; j < vvFis[i].size(); j++)
     if((vvFis[i][j] >> 1) == i0)
       return j;
-  abort();
+  return -1;
 }
 int Transduction::Replace(int i, int f, bool fUpdate) {
   if(nVerbose > 4)
@@ -105,7 +105,8 @@ int Transduction::Replace(int i, int f, bool fUpdate) {
   int count = 0;
   for(unsigned j = 0; j < vvFos[i].size(); j++) {
     int k = vvFos[i][j];
-    unsigned l = FindFi(k, i);
+    int l = FindFi(k, i);
+    assert(l >= 0);
     int fc = f ^ (vvFis[k][l] & 1);
     if(find(vvFis[k].begin(), vvFis[k].end(), fc) != vvFis[k].end()) {
       DecRef(vvCs[k][l]);
@@ -129,7 +130,8 @@ int Transduction::ReplaceByConst(int i, bool c) {
   int count = 0;
   for(unsigned j = 0; j < vvFos[i].size(); j++) {
     int k = vvFos[i][j];
-    unsigned l = FindFi(k, i);
+    int l = FindFi(k, i);
+    assert(l >= 0);
     bool fc = c ^ (vvFis[k][l] & 1);
     DecRef(vvCs[k][l]);
     vvCs[k].erase(vvCs[k].begin() + l);

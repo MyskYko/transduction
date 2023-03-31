@@ -49,6 +49,16 @@ protected:
     for(unsigned i = 0; i < v.size(); i++)
       CopyVec(v[i], u[i]);
   }
+  inline lit Xor(lit x, lit y) const {
+    lit f = man->And(x, man->LitNot(y));
+    man->IncRef(f);
+    lit g = man->And(man->LitNot(x), y);
+    man->IncRef(g);
+    lit r = man->Or(f, g);
+    man->DecRef(f);
+    man->DecRef(g);
+    return r;
+  }
 };
 
 class TransductionBackup: ManUtil {
@@ -120,7 +130,7 @@ class Transduction: ManUtil {
   void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = LitMax());
   void Disconnect(int i, int i0, unsigned j, bool fUpdate = true, bool fPfUpdate = true);
   int  Remove(int i, bool fPfUpdate = true);
-  unsigned FindFi(int i, int i0) const;
+  int  FindFi(int i, int i0) const;
   int  Replace(int i, int f, bool fUpdate = true);
   int  ReplaceByConst(int i, bool c);
   void NewGate(int &pos);
@@ -159,16 +169,6 @@ class Transduction: ManUtil {
     bool c0 = vvFis[i][j] & 1;
     return man->LitNotCond(vFs_[i0], c0);
   }
-  inline lit Xor(lit x, lit y) const {
-    lit f = man->And(x, man->LitNot(y));
-    man->IncRef(f);
-    lit g = man->And(man->LitNot(x), y);
-    man->IncRef(g);
-    lit r = man->Or(f, g);
-    man->DecRef(f);
-    man->DecRef(g);
-    return r;
-  }
   inline bool AllFalse(std::vector<bool> const &v) const {
     for(std::list<int>::const_iterator it = vObjs.begin(); it != vObjs.end(); it++)
       if(v[*it])
@@ -178,9 +178,9 @@ class Transduction: ManUtil {
   inline bool Verify() const {
     for(unsigned j = 0; j < vPos.size(); j++) {
       lit x = Xor(LitFi(vPos[j], 0), vPoFs[j]);
-      man->IncRef(x);
+      IncRef(x);
       Update(x, man->And(x, man->LitNot(vvCs[vPos[j]][0])));
-      man->DecRef(x);
+      DecRef(x);
       if(!man->IsConst0(x))
         return false;
     }

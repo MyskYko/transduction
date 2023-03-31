@@ -33,7 +33,8 @@ void Transduction::CalcG(int i) {
   Update(vGs[i], man->Const1());
   for(unsigned j = 0; j < vvFos[i].size(); j++) {
     int k = vvFos[i][j];
-    unsigned l = FindFi(k, i);
+    int l = FindFi(k, i);
+    assert(l >= 0);
     Update(vGs[i], man->And(vGs[i], vvCs[k][l]));
   }
 }
