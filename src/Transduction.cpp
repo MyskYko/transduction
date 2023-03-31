@@ -27,7 +27,8 @@ Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType, int n
   for(unsigned i = 0; i < vPos.size(); i++)
     Update(vPoFs[i], LitFi(vPos[i], 0));
   state = PfState::none;
-  ShufflePis(nShufflePis);
+  if(nShufflePis)
+    ShufflePis(nShufflePis);
 }
 Transduction::~Transduction() {
   DelVec(vFs);

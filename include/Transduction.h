@@ -88,6 +88,9 @@ private:
 
 class Transduction: ManUtil {
  public:
+  int  CountGates() const;
+  int  CountWires() const;
+  int  CountNodes() const;
   void GenerateAig(aigman &aig) const;
 
   Transduction(aigman const &aig, int nVerbose, int nSortType = 0, int nShufflePis = 0);
@@ -131,9 +134,6 @@ private:
   std::vector<bool> vFoConeShared;
   std::vector<lit> vPoFs;
 
-  int  CountGates() const;
-  int  CountWires() const;
-  int  CountNodes() const;
   void SortObjs_rec(std::list<int>::iterator const &it);
   void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = LitMax());
   void Disconnect(int i, int i0, unsigned j, bool fUpdate = true, bool fPfUpdate = true);
