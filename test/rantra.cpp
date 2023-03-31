@@ -16,13 +16,9 @@ void Print(Transduction const & t, chrono::steady_clock::time_point const & star
 }
 
 int main(int argc, char ** argv) {
-  bool fMspf = false;
+  bool fMspf = true;
   int N = 100;
   int M = 6;
-  if(fMspf) {
-    N = 10;
-    M = 7;
-  }
   srand(time(NULL));
   int nSortType = rand() % 4;
   int nPiShuffle = rand();
@@ -59,21 +55,21 @@ int main(int argc, char ** argv) {
         assert(t.MspfDebug());
       break;
     case 2:
-      count -= t.Cspf(true);
-      assert(t.CspfDebug());
+      count -= fMspf? t.Mspf(true): t.Cspf(true);
+      assert(fMspf? t.MspfDebug(): t.CspfDebug());
       break;
     case 3:
-      count -= t.Resub(false);
-      assert(t.CspfDebug());
+      count -= t.Resub(fMspf);
+      assert(fMspf? t.MspfDebug(): t.CspfDebug());
       break;
     case 4:
-      count -= t.ResubMono(false);
-      assert(t.CspfDebug());
+      count -= t.ResubMono(fMspf);
+      assert(fMspf? t.MspfDebug(): t.CspfDebug());
       break;
     case 5:
-      count -= t.ResubShared(false);
-      count -= t.Cspf(true);
-      assert(t.CspfDebug());
+      count -= t.ResubShared(fMspf);
+      count -= fMspf? t.Mspf(true): t.Cspf(true);
+      assert(fMspf? t.MspfDebug(): t.CspfDebug());
       break;
     default:
       cout << "Wrong test pattern!" << endl;
