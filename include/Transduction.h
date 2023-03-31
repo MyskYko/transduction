@@ -90,7 +90,7 @@ class Transduction: ManUtil {
  public:
   void GenerateAig(aigman &aig) const;
 
-  Transduction(aigman const &aig, int nVerbose, int nSortType);
+  Transduction(aigman const &aig, int nVerbose, int nSortType = 0, int nShufflePis = 0);
   ~Transduction();
   bool BuildDebug();
 
@@ -107,6 +107,11 @@ class Transduction: ManUtil {
   int Resub(bool fMspf);
   int ResubMono(bool fMspf);
   int ResubShared(bool fMspf);
+
+  int RepeatResub(bool fMono, bool fMspf);
+  int RepeatResubInner(bool fMspf, bool fInner);
+  int RepeatResubOuter(bool fMspf, bool fInner, bool fOuter);
+  int Optimize(bool fFirstMerge, bool fMspfMerge, bool fMspfResub, bool fInner, bool fOuter);
 
 private:
   int nVerbose;
@@ -143,6 +148,7 @@ private:
   bool IsFoConeShared(int i) const;
   void ImportAig(aigman const &aig);
 
+  void ShufflePis(int seed);
   void Build(int i, std::vector<lit> &vFs_) const;
   void Build(bool fPfUpdate = true);
   void RemoveConstOutputs();

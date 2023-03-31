@@ -6,10 +6,12 @@
 
 using namespace std;
 
-Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType): nVerbose(nVerbose), nSortType(nSortType) {
+Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType, int nShufflePis): nVerbose(nVerbose), nSortType(nSortType) {
   Param p;
   p.nGbc = 1;
   p.nReo = 4000;
+  if(nSortType)
+    p.fCountOnes = true;
   man = new Man(aig.nPis, p);
   ImportAig(aig);
   Update(vFs[0], man->Const0());
@@ -25,6 +27,7 @@ Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType): nVer
   for(unsigned i = 0; i < vPos.size(); i++)
     Update(vPoFs[i], LitFi(vPos[i], 0));
   state = PfState::none;
+  ShufflePis(nShufflePis);
 }
 Transduction::~Transduction() {
   DelVec(vFs);
@@ -34,6 +37,12 @@ Transduction::~Transduction() {
   assert(man->CountNodes() == (int)vPis.size() + 1);
   assert(!man->Ref(man->Const0()));
   delete man;
+}
+
+void Transduction::ShufflePis(int seed) {
+  srand(seed);
+  for(int i = (int)vPis.size() - 1; i > 0; i--)
+    swap(vPis[i], vPis[rand() % (i + 1)]);
 }
 
 void Transduction::Build(int i, vector<lit> &vFs_) const {
