@@ -87,13 +87,13 @@ private:
 };
 
 class Transduction: ManUtil {
- public:
+public:
   int  CountGates() const;
   int  CountWires() const;
   int  CountNodes() const;
   void GenerateAig(aigman &aig) const;
 
-  Transduction(aigman const &aig, int nVerbose, int nSortType = 0, int nShufflePis = 0);
+  Transduction(aigman const &aig, int nVerbose, int nSortType = 0, int nPiShuffle = 0);
   ~Transduction();
   bool BuildDebug();
 
@@ -184,17 +184,6 @@ private:
         return false;
     return true;
   }
-  inline bool Verify() const {
-    for(unsigned j = 0; j < vPos.size(); j++) {
-      lit x = Xor(LitFi(vPos[j], 0), vPoFs[j]);
-      IncRef(x);
-      Update(x, man->And(x, man->LitNot(vvCs[vPos[j]][0])));
-      DecRef(x);
-      if(!man->IsConst0(x))
-        return false;
-    }
-    return true;
-  }
   inline void Save(TransductionBackup &b) const {
     b.man = man;
     b.nObjsAlloc = nObjsAlloc;
@@ -221,6 +210,28 @@ private:
     vUpdates = b.vUpdates;
     vPfUpdates = b.vPfUpdates;
     vFoConeShared = b.vFoConeShared;
+  }
+
+public:
+  inline PfState State() const {
+    return state;
+  }
+  inline void PrintStats() const {
+    int gates = CountGates();
+    int wires = CountWires();
+    int nodes = wires - gates;
+    std::cout << "nodes " << std::setw(5) << nodes << " gates " << std::setw(5) << gates << " wires " << std::setw(5) << wires << std::endl;
+  }
+  inline bool Verify() const {
+    for(unsigned j = 0; j < vPos.size(); j++) {
+      lit x = Xor(LitFi(vPos[j], 0), vPoFs[j]);
+      IncRef(x);
+      Update(x, man->And(x, man->LitNot(vvCs[vPos[j]][0])));
+      DecRef(x);
+      if(!man->IsConst0(x))
+        return false;
+    }
+    return true;
   }
 };
 

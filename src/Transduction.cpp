@@ -6,7 +6,7 @@
 
 using namespace std;
 
-Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType, int nShufflePis): nVerbose(nVerbose), nSortType(nSortType) {
+Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType, int nPiShuffle): nVerbose(nVerbose), nSortType(nSortType) {
   Param p;
   p.nGbc = 1;
   p.nReo = 4000;
@@ -27,8 +27,8 @@ Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType, int n
   for(unsigned i = 0; i < vPos.size(); i++)
     Update(vPoFs[i], LitFi(vPos[i], 0));
   state = PfState::none;
-  if(nShufflePis)
-    ShufflePis(nShufflePis);
+  if(nPiShuffle)
+    ShufflePis(nPiShuffle);
 }
 Transduction::~Transduction() {
   DelVec(vFs);

@@ -9,5 +9,8 @@ add_library(transduction ${FILENAMES})
 target_include_directories(transduction PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(transduction nextbdd aig)
 
-add_executable(tra ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp)
+add_executable(tra ${CMAKE_CURRENT_SOURCE_DIR}/test/tra.cpp)
 target_link_libraries(tra transduction)
+
+add_executable(rantra ${CMAKE_CURRENT_SOURCE_DIR}/test/rantra.cpp)
+target_link_libraries(rantra transduction)
