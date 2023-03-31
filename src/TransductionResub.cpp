@@ -77,7 +77,6 @@ int Transduction::Resub(bool fMspf) {
   return count;
 }
 
-/*
 int Transduction::ResubMono(bool fMspf) {
   if(nVerbose)
     cout << "Resubstitution mono" << endl;
@@ -94,16 +93,15 @@ int Transduction::ResubMono(bool fMspf) {
     for(unsigned i = 0; i < vPis.size(); i++) {
       if(vvFos[*it].empty())
         break;
-      int f = vPis[i] << 1;
-      if(TryConnect(*it, f) || TryConnect(*it, f ^ 1)) {
+      if(TryConnect(*it, vPis[i], false) || TryConnect(*it, vPis[i], true)) {
         count--;
         int diff;
         if(fMspf) {
           Build();
-          diff = Mspf(true, *it, f >> 1);
+          diff = Mspf(true, *it, vPis[i]);
         } else {
           vPfUpdates[*it] = true;
-          diff = Cspf(true, *it, f >> 1);
+          diff = Cspf(true, *it, vPis[i]);
         }
         if(diff) {
           count += diff;
@@ -127,16 +125,15 @@ int Transduction::ResubMono(bool fMspf) {
       if(vvFos[*it].empty())
         break;
       if(!vMarks[*it2] && !vvFos[*it2].empty()) {
-        int f = *it2 << 1;
-        if(TryConnect(*it, f) || TryConnect(*it, f ^ 1)) {
+        if(TryConnect(*it, *it2, false) || TryConnect(*it, *it2, true)) {
           count--;
           int diff;
           if(fMspf) {
             Build();
-            diff = Mspf(true, *it, f >> 1);
+            diff = Mspf(true, *it, *it2);
           } else {
             vPfUpdates[*it] = true;
-            diff = Cspf(true, *it, f >> 1);
+            diff = Cspf(true, *it, *it2);
           }
           if(diff) {
             count += diff;
@@ -162,4 +159,3 @@ int Transduction::ResubMono(bool fMspf) {
   }
   return count;
 }
-*/

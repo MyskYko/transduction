@@ -104,8 +104,9 @@ class Transduction: ManUtil {
   int TrivialDecompose();
 
   int Resub(bool fMspf);
+  int ResubMono(bool fMspf);
 
- private:
+private:
   int nVerbose;
   int nSortType;
   int nObjsAlloc;
