@@ -1,4 +1,5 @@
 #include <iostream>
+#include <set>
 #include <algorithm>
 #include <cassert>
 
@@ -105,5 +106,75 @@ int Transduction::TrivialDecompose() {
   for(list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++)
     if(vvFis[*it].size() > 2)
       count += TrivialDecomposeOne(it, pos);
+  return count;
+}
+
+int Transduction::Decompose() {
+  if(nVerbose)
+    cout << "Decompose" << endl;
+  int count = 0;
+  int pos = vPis.size() + 1;
+  for(list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++) {
+    set<int> s1(vvFis[*it].begin(), vvFis[*it].end());
+    assert(s1.size() == vvFis[*it].size());
+    list<int>::iterator it2 = it;
+    for(it2++; it2 != vObjs.end(); it2++) {
+      set<int> s2(vvFis[*it2].begin(), vvFis[*it2].end());
+      set<int> s;
+      set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), inserter(s, s.begin()));
+      if(s.size() > 1) {
+        if(s == s1) {
+          if(s == s2) {
+            if(nVerbose > 1)
+              cout << "\tReplace " << *it2 << " by " << *it << endl;
+            count += Replace(*it2, *it << 1, false);
+            it2 = vObjs.erase(it2);
+            it2--;
+          } else {
+            if(nVerbose > 1)
+              cout << "\tDecompose " << *it2 << " by " << *it << endl;
+            for(set<int>::iterator it3 = s.begin(); it3 != s.end(); it3++) {
+              unsigned j = find(vvFis[*it2].begin(), vvFis[*it2].end(), *it3) - vvFis[*it2].begin();
+              Disconnect(*it2, *it3 >> 1, j, false);
+            }
+            count += s.size();
+            if(find(vvFis[*it2].begin(), vvFis[*it2].end(), *it << 1) == vvFis[*it2].end()) {
+              Connect(*it2, *it << 1, false, false);
+              count--;
+            }
+            vPfUpdates[*it2] = true;
+          }
+          continue;
+        }
+        if(s == s2) {
+          it = vObjs.insert(it, *it2);
+          vObjs.erase(it2);
+        } else {
+          NewGate(pos);
+          if(nVerbose > 1)
+            cout << "\tCreate " << pos << " for intersection of " << *it << " and " << *it2  << endl;
+          if(nVerbose > 2) {
+            cout << "\t\tIntersection :";
+            for(set<int>::iterator it3 = s.begin(); it3 != s.end(); it3++)
+              cout << " " << (*it3 >> 1) << "(" << (*it3 & 1) << ")";
+            cout << endl;
+          }
+          for(set<int>::iterator it3 = s.begin(); it3 != s.end(); it3++)
+            Connect(pos, *it3, false, false);
+          count -= s.size();
+          it = vObjs.insert(it, pos);
+          Build(pos, vFs);
+          vPfUpdates[*it] = true;
+        }
+        s1 = s;
+        it2 = it;
+      }
+    }
+    if(vvFis[*it].size() > 2) {
+      if(nVerbose > 1)
+        cout << "\tTrivial decompose " << *it << endl;
+      count += TrivialDecomposeOne(it, pos);
+    }
+  }
   return count;
 }

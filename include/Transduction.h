@@ -102,9 +102,11 @@ class Transduction: ManUtil {
 
   int TrivialMerge();
   int TrivialDecompose();
+  int Decompose();
 
   int Resub(bool fMspf);
   int ResubMono(bool fMspf);
+  int ResubShared(bool fMspf);
 
 private:
   int nVerbose;

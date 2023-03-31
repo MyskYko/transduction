@@ -42,12 +42,11 @@ int Transduction::Resub(bool fMspf) {
     MarkFoCone_rec(vMarks, *it);
     list<int> targets2 = vObjs;
     for(list<int>::iterator it2 = targets2.begin(); it2 != targets2.end(); it2++)
-      if(!vMarks[*it2] && !vvFos[*it2].empty()) {
+      if(!vMarks[*it2] && !vvFos[*it2].empty())
         if(TryConnect(*it, *it2, false) || TryConnect(*it, *it2, true)) {
           fConnect |= true;
           count--;
         }
-      }
     if(fConnect) {
       if(fMspf) {
         Build();
@@ -124,7 +123,7 @@ int Transduction::ResubMono(bool fMspf) {
     for(list<int>::iterator it2 = targets2.begin(); it2 != targets2.end(); it2++) {
       if(vvFos[*it].empty())
         break;
-      if(!vMarks[*it2] && !vvFos[*it2].empty()) {
+      if(!vMarks[*it2] && !vvFos[*it2].empty())
         if(TryConnect(*it, *it2, false) || TryConnect(*it, *it2, true)) {
           count--;
           int diff;
@@ -147,7 +146,6 @@ int Transduction::ResubMono(bool fMspf) {
             count++;
           }
         }
-      }
     }
     if(vvFos[*it].empty())
       continue;
@@ -158,4 +156,46 @@ int Transduction::ResubMono(bool fMspf) {
     }
   }
   return count;
+}
+
+int Transduction::ResubShared(bool fMspf) {
+  if(nVerbose)
+    cout << "Merge" << endl;
+  int count = fMspf? Mspf(true): Cspf(true);
+  list<int> targets = vObjs;
+  for(list<int>::reverse_iterator it = targets.rbegin(); it != targets.rend(); it++) {
+    if(nVerbose > 1)
+      cout << "\tMerge " << *it << endl;
+    if(vvFos[*it].empty())
+      continue;
+    count += TrivialMergeOne(*it);
+    bool fConnect = false;
+    for(unsigned i = 0; i < vPis.size(); i++)
+      if(TryConnect(*it, vPis[i], false) || TryConnect(*it, vPis[i], true)) {
+        fConnect |= true;
+        count--;
+      }
+    vector<bool> vMarks(nObjsAlloc);
+    MarkFoCone_rec(vMarks, *it);
+    for(list<int>::iterator it2 = targets.begin(); it2 != targets.end(); it2++)
+      if(!vMarks[*it2] && !vvFos[*it2].empty())
+        if(TryConnect(*it, *it2, false) || TryConnect(*it, *it2, true)) {
+          fConnect |= true;
+          count--;
+        }
+    if(fConnect) {
+      if(fMspf) {
+        Build();
+        count += Mspf(true, *it);
+      } else {
+        vPfUpdates[*it] = true;
+        count += Cspf(true, *it);
+      }
+      if(!vvFos[*it].empty()) {
+        vPfUpdates[*it] = true;
+        count += fMspf? Mspf(true): Cspf(true);
+      }
+    }
+  }
+  return count + Decompose();
 }
