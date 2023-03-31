@@ -6,6 +6,19 @@
 
 using namespace std;
 
+int Transduction::CountGates() const {
+  return vObjs.size();
+}
+int Transduction::CountWires() const {
+  int count = 0;
+  for(std::list<int>::const_iterator it = vObjs.begin(); it != vObjs.end(); it++)
+    count += vvFis[*it].size();
+  return count;
+}
+int Transduction::CountNodes() const {
+  return CountWires() - CountGates();
+}
+
 void Transduction::SortObjs_rec(list<int>::iterator const &it) {
   for(unsigned j = 0; j < vvFis[*it].size(); j++) {
     int i0 = vvFis[*it][j] >> 1;
@@ -31,7 +44,7 @@ void Transduction::Connect(int i, int f, bool fSort, bool fUpdate, lit c) {
   vvFos[i0].push_back(i);
   if(fUpdate)
     vUpdates[i] = true;
-  man->IncRef(c);
+  IncRef(c);
   vvCs[i].push_back(c);
   if(fSort && !vvFos[i].empty() && !vvFis[i0].empty()) {
     list<int>::iterator it = find(vObjs.begin(), vObjs.end(), i);
@@ -51,7 +64,7 @@ void Transduction::Disconnect(int i, int i0, unsigned j, bool fUpdate, bool fPfU
     cout << "\t\t\t\t\tDisconnect " << i0 << "(" << (vvFis[i][j] & 1) << ")" << " from " << i << endl;
   vvFos[i0].erase(find(vvFos[i0].begin(), vvFos[i0].end(), i));
   vvFis[i].erase(vvFis[i].begin() + j);
-  man->DecRef(vvCs[i][j]);
+  DecRef(vvCs[i][j]);
   vvCs[i].erase(vvCs[i].begin() + j);
   if(fUpdate)
     vUpdates[i] = true;
@@ -71,9 +84,9 @@ int Transduction::Remove(int i, bool fPfUpdate) {
   }
   int count = vvFis[i].size();
   vvFis[i].clear();
-  man->DecRef(vFs[i]);
-  man->DecRef(vGs[i]);
-  vFs[i] = vGs[i] = Z;
+  DecRef(vFs[i]);
+  DecRef(vGs[i]);
+  vFs[i] = vGs[i] = LitMax();
   DelVec(vvCs[i]);
   vUpdates[i] = vPfUpdates[i] = false;
   return count;
@@ -95,7 +108,7 @@ int Transduction::Replace(int i, int f, bool fUpdate) {
     unsigned l = FindFi(k, i);
     int fc = f ^ (vvFis[k][l] & 1);
     if(find(vvFis[k].begin(), vvFis[k].end(), fc) != vvFis[k].end()) {
-      man->DecRef(vvCs[k][l]);
+      DecRef(vvCs[k][l]);
       vvCs[k].erase(vvCs[k].begin() + l);
       vvFis[k].erase(vvFis[k].begin() + l);
       count++;
@@ -118,7 +131,7 @@ int Transduction::ReplaceByConst(int i, bool c) {
     int k = vvFos[i][j];
     unsigned l = FindFi(k, i);
     bool fc = c ^ (vvFis[k][l] & 1);
-    man->DecRef(vvCs[k][l]);
+    DecRef(vvCs[k][l]);
     vvCs[k].erase(vvCs[k].begin() + l);
     vvFis[k].erase(vvFis[k].begin() + l);
     if(fc) {
@@ -143,12 +156,27 @@ void Transduction::NewGate(int &pos) {
     nObjsAlloc++;
     vvFis.resize(nObjsAlloc);
     vvFos.resize(nObjsAlloc);
-    vFs.resize(nObjsAlloc, Z);
-    vGs.resize(nObjsAlloc, Z);
+    vFs.resize(nObjsAlloc, LitMax());
+    vGs.resize(nObjsAlloc, LitMax());
     vvCs.resize(nObjsAlloc);
     vUpdates.resize(nObjsAlloc);
     vPfUpdates.resize(nObjsAlloc);
   }
+}
+
+void Transduction::MarkFiCone_rec(vector<bool> &vMarks, int i) const {
+  if(vMarks[i])
+    return;
+  vMarks[i] = true;
+  for(unsigned j = 0; j < vvFis[i].size(); j++)
+    MarkFiCone_rec(vMarks, vvFis[i][j] >> 1);
+}
+void Transduction::MarkFoCone_rec(vector<bool> &vMarks, int i) const {
+  if(vMarks[i])
+    return;
+  vMarks[i] = true;
+  for(unsigned j = 0; j < vvFos[i].size(); j++)
+    MarkFoCone_rec(vMarks, vvFos[i][j]);
 }
 
 void Transduction::ImportAig(aigman const &aig) {
@@ -157,8 +185,8 @@ void Transduction::ImportAig(aigman const &aig) {
   nObjsAlloc = aig.nObjs + aig.nPos;
   vvFis.resize(nObjsAlloc);
   vvFos.resize(nObjsAlloc);
-  vFs.resize(nObjsAlloc, Z);
-  vGs.resize(nObjsAlloc, Z);
+  vFs.resize(nObjsAlloc, LitMax());
+  vGs.resize(nObjsAlloc, LitMax());
   vvCs.resize(nObjsAlloc);
   vUpdates.resize(nObjsAlloc);
   vPfUpdates.resize(nObjsAlloc);

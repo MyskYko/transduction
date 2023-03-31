@@ -11,12 +11,13 @@ int Transduction::RemoveRedundantFis(int i, int block_i0, unsigned j) {
     if(block_i0 == (vvFis[i][j] >> 1))
       continue;
     lit x = man->Const1();
+    IncRef(x);
     for(unsigned jj = 0; jj < vvFis[i].size(); jj++)
       if(j != jj)
         Update(x, man->And(x, LitFi(i, jj)));
     Update(x, man->Or(man->LitNot(x), vGs[i]));
     Update(x, man->Or(x, LitFi(i, j)));
-    man->DecRef(x);
+    DecRef(x);
     if(man->IsConst1(x)) {
       int i0 = vvFis[i][j] >> 1;
       if(nVerbose > 4)
@@ -41,6 +42,7 @@ int Transduction::CalcC(int i) {
   int count = 0;
   for(unsigned j = 0; j < vvFis[i].size(); j++) {
     lit x = man->Const1();
+    IncRef(x);
     for(unsigned jj = j + 1; jj < vvFis[i].size(); jj++)
       Update(x, man->And(x, LitFi(i, jj)));
     Update(x, man->Or(man->LitNot(x), vGs[i]));
@@ -54,7 +56,7 @@ int Transduction::CalcC(int i) {
       Update(vvCs[i][j], x);
       vPfUpdates[i0] = true;
     }
-    man->DecRef(x);
+    DecRef(x);
   }
   return count;
 }

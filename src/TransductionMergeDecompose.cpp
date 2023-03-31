@@ -36,7 +36,7 @@ int Transduction::TrivialMergeOne(int i) {
         vvFos[f >> 1].push_back(i);
         itfi = vFisOld.insert(itfi, f);
         itc = vCsOld.insert(itc, vvCs[i0][jj]);
-        man->IncRef(*itc);
+        IncRef(*itc);
         itfi++;
         itc++;
         count--;
@@ -47,7 +47,7 @@ int Transduction::TrivialMergeOne(int i) {
     count += Remove(i0, false);
     vObjs.erase(find(vObjs.begin(), vObjs.end(), i0));
     vFisOld.erase(itfi);
-    man->DecRef(*itc);
+    DecRef(*itc);
     vCsOld.erase(itc);
     j--;
   }
@@ -84,10 +84,11 @@ int Transduction::TrivialDecomposeOne(list<int>::iterator const &it, int &pos) {
         Update(vGs[pos], vGs[*it]);
       else if(state == PfState::mspf) {
         lit x = man->Const1();
+        IncRef(x);
         for(unsigned j = 0; j < vvFis[*it].size(); j++)
           Update(x, man->And(x, LitFi(*it, j)));
         Update(vGs[pos], man->Or(man->LitNot(x), vGs[*it]));
-        man->DecRef(x);
+        DecRef(x);
       }
     }
     Connect(*it, pos << 1, false, false, vGs[pos]);

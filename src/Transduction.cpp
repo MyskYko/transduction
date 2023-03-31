@@ -12,13 +12,16 @@ Transduction::Transduction(aigman const &aig, int nVerbose, int nSortType): nVer
   p.nReo = 4000;
   man = new Man(aig.nPis, p);
   ImportAig(aig);
+  Update(vFs[0], man->Const0());
   for(unsigned i = 0; i < vPis.size(); i++)
-    vFs[i + 1] = man->IthVar(i);
+    Update(vFs[i + 1], man->IthVar(i));
   Build(false);
   man->Reorder();
   man->TurnOffReo();
+  for(unsigned i = 0; i < vPos.size(); i++)
+    Update(vvCs[vPos[i]][0], man->Const0());
   RemoveConstOutputs();
-  vPoFs.resize(vPos.size(), Z);
+  vPoFs.resize(vPos.size(), LitMax());
   for(unsigned i = 0; i < vPos.size(); i++)
     Update(vPoFs[i], LitFi(vPos[i], 0));
   state = PfState::none;
@@ -29,6 +32,7 @@ Transduction::~Transduction() {
   DelVec(vvCs);
   DelVec(vPoFs);
   assert(man->CountNodes() == (int)vPis.size() + 1);
+  assert(!man->Ref(man->Const0()));
   delete man;
 }
 
@@ -45,9 +49,9 @@ void Transduction::Build(bool fPfUpdate) {
   for(list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++)
     if(vUpdates[*it]) {
       lit x = vFs[*it];
-      man->IncRef(x);
+      IncRef(x);
       Build(*it, vFs);
-      man->DecRef(x);
+      DecRef(x);
       if(x != vFs[*it])
         for(unsigned j = 0; j < vvFos[*it].size(); j++)
           vUpdates[vvFos[*it][j]] = true;
@@ -74,18 +78,19 @@ void Transduction::RemoveConstOutputs() {
   bool fRemoved = false;
   for(unsigned i = 0; i < vPos.size(); i++) {
     int i0 = vvFis[vPos[i]][0] >> 1;
+    lit c = vvCs[vPos[i]][0];
     if(i0) {
-      if(man->IsConst1(man->Or(LitFi(vPos[i], 0), vvCs[vPos[i]][0]))) {
+      if(man->IsConst1(man->Or(LitFi(vPos[i], 0), c))) {
         if(nVerbose > 3)
           cout << "\t\t\tConst 1 output : po " << i << endl;
         Disconnect(vPos[i], i0, 0, false, false);
-        Connect(vPos[i], 1, false, false);
+        Connect(vPos[i], 1, false, false, c);
         fRemoved |= vvFos[i0].empty();
-    } else if(man->IsConst1(man->Or(man->LitNot(LitFi(vPos[i], 0)), vvCs[vPos[i]][0]))) {
+      } else if(man->IsConst1(man->Or(man->LitNot(LitFi(vPos[i], 0)), c))) {
         if(nVerbose > 3)
           cout << "\t\t\tConst 0 output : po " << i << endl;
         Disconnect(vPos[i], i0, 0, false, false);
-        Connect(vPos[i], 0, false, false);
+        Connect(vPos[i], 0, false, false, c);
         fRemoved |= vvFos[i0].empty();
       }
     }

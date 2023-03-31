@@ -46,25 +46,26 @@ void Transduction::BuildFoConeCompl(int i, vector<lit> &vPoFsCompl) const {
 }
 bool Transduction::MspfCalcG(int i) {
   lit g = vGs[i];
-  man->IncRef(g);
-  vector<lit> vPoFsCompl(vPos.size(), Z);
+  IncRef(g);
+  vector<lit> vPoFsCompl(vPos.size(), LitMax());
   BuildFoConeCompl(i, vPoFsCompl);
   Update(vGs[i], man->Const1());
   for(unsigned j = 0; j < vPos.size(); j++) {
     lit x = man->LitNot(Xor(vPoFs[j], vPoFsCompl[j]));
-    man->IncRef(x);
+    IncRef(x);
     Update(x, man->Or(x, vvCs[vPos[j]][0]));
     Update(vGs[i], man->And(vGs[i], x));
-    man->DecRef(x);
+    DecRef(x);
   }
   DelVec(vPoFsCompl);
-  man->DecRef(g);
+  DecRef(g);
   return vGs[i] != g;
 }
 
 int Transduction::MspfCalcC(int i, int block_i0) {
   for(unsigned j = 0; j < vvFis[i].size(); j++) {
     lit x = man->Const1();
+    IncRef(x);
     for(unsigned jj = 0; jj < vvFis[i].size(); jj++)
       if(j != jj)
         Update(x, man->And(x, LitFi(i, jj)));
@@ -74,13 +75,13 @@ int Transduction::MspfCalcC(int i, int block_i0) {
       if(nVerbose > 4)
         cout << "\t\t\t\tMspf remove wire " << i0 << "(" << (vvFis[i][j] & 1) << ")" << " -> " << i << endl;
       Disconnect(i, i0, j);
-      man->DecRef(x);
+      DecRef(x);
       return RemoveRedundantFis(i, block_i0, j) + 1;
     } else if(vvCs[i][j] != x) {
       Update(vvCs[i][j], x);
       vPfUpdates[i0] = true;
     }
-    man->DecRef(x);
+    DecRef(x);
   }
   return 0;
 }
@@ -119,9 +120,9 @@ int Transduction::Mspf(bool fSort, int block, int block_i0) {
       if(vFoConeShared[*it]) {
         vFoConeShared[*it] = false;
         lit g = vGs[*it];
-        man->IncRef(g);
+        IncRef(g);
         CalcG(*it);
-        man->DecRef(g);
+        DecRef(g);
         if(g == vGs[*it] && !vPfUpdates[*it]) {
           it++;
           continue;

@@ -8,21 +8,27 @@
 
 using namespace NextBdd;
 
-#define Z 0 // TODO: fix this
-
 enum class PfState {none, cspf, mspf};
 
 class ManUtil {
 protected:
   Man *man;
+  inline void IncRef(lit x) const {
+    if(x != LitMax())
+      man->IncRef(x);
+  }
+  inline void DecRef(lit x) const {
+    if(x != LitMax())
+      man->DecRef(x);
+  }
   inline void Update(lit &x, lit y) const {
-    man->DecRef(x);
+    DecRef(x);
     x = y;
-    man->IncRef(x);
+    IncRef(x);
   }
   inline void DelVec(std::vector<lit> &v) const {
     for(unsigned i = 0; i < v.size(); i++)
-      man->DecRef(v[i]);
+      DecRef(v[i]);
     v.clear();
   }
   inline void DelVec(std::vector<std::vector<lit> > &v) const {
@@ -34,7 +40,7 @@ protected:
     DelVec(v);
     v = u;
     for(unsigned i = 0; i < v.size(); i++)
-      man->IncRef(v[i]);
+      IncRef(v[i]);
   }
   inline void CopyVec(std::vector<std::vector<lit> > &v, std::vector<std::vector<lit> > const &u) const {
     for(unsigned i = u.size(); i < v.size(); i++)
@@ -43,6 +49,31 @@ protected:
     for(unsigned i = 0; i < v.size(); i++)
       CopyVec(v[i], u[i]);
   }
+};
+
+class TransductionBackup: ManUtil {
+public:
+  ~TransductionBackup() {
+    if(man) {
+      DelVec(vFs);
+      DelVec(vGs);
+      DelVec(vvCs);
+    }
+  }
+
+private:
+  int nObjsAlloc;
+  PfState state;
+  std::list<int> vObjs;
+  std::vector<std::vector<int> > vvFis;
+  std::vector<std::vector<int> > vvFos;
+  std::vector<lit> vFs;
+  std::vector<lit> vGs;
+  std::vector<std::vector<lit> > vvCs;
+  std::vector<bool> vUpdates;
+  std::vector<bool> vPfUpdates;
+  std::vector<bool> vFoConeShared;
+  friend class Transduction;
 };
 
 class Transduction: ManUtil {
@@ -62,6 +93,8 @@ class Transduction: ManUtil {
   int TrivialMerge();
   int TrivialDecompose();
 
+  int Resub(bool fMspf);
+
  private:
   int nVerbose;
   int nSortType;
@@ -80,13 +113,18 @@ class Transduction: ManUtil {
   std::vector<bool> vFoConeShared;
   std::vector<lit> vPoFs;
 
+  int  CountGates() const;
+  int  CountWires() const;
+  int  CountNodes() const;
   void SortObjs_rec(std::list<int>::iterator const &it);
-  void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = Z);
+  void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = LitMax());
   void Disconnect(int i, int i0, unsigned j, bool fUpdate = true, bool fPfUpdate = true);
   int  Remove(int i, bool fPfUpdate = true);
   unsigned FindFi(int i, int i0) const;
   int  Replace(int i, int f, bool fUpdate = true);
   int  ReplaceByConst(int i, bool c);
+  void MarkFiCone_rec(std::vector<bool> &vMarks, int i) const;
+  void MarkFoCone_rec(std::vector<bool> &vMarks, int i) const;
   void NewGate(int &pos);
   void ImportAig(aigman const &aig);
 
@@ -106,8 +144,10 @@ class Transduction: ManUtil {
   bool MspfCalcG(int i);
   int  MspfCalcC(int i, int block_i0 = -1);
 
-  int TrivialMergeOne(int i);
-  int TrivialDecomposeOne(std::list<int>::iterator const &it, int &pos);
+  int  TrivialMergeOne(int i);
+  int  TrivialDecomposeOne(std::list<int>::iterator const &it, int &pos);
+
+  bool TryConnect(int i, int i0, bool c0);
 
   inline lit LitFi(int i, int j) const {
     int i0 = vvFis[i][j] >> 1;
@@ -145,6 +185,33 @@ class Transduction: ManUtil {
         return false;
     }
     return true;
+  }
+  inline void Save(TransductionBackup &b) const {
+    b.man = man;
+    b.nObjsAlloc = nObjsAlloc;
+    b.state = state;
+    b.vObjs = vObjs;
+    b.vvFis = vvFis;
+    b.vvFos = vvFos;
+    CopyVec(b.vFs, vFs);
+    CopyVec(b.vGs, vGs);
+    CopyVec(b.vvCs, vvCs);
+    b.vUpdates = vUpdates;
+    b.vPfUpdates = vPfUpdates;
+    b.vFoConeShared = vFoConeShared;
+  }
+  inline void Load(TransductionBackup const &b) {
+    nObjsAlloc = b.nObjsAlloc;
+    state = b.state;
+    vObjs = b.vObjs;
+    vvFis = b.vvFis;
+    vvFos = b.vvFos;
+    CopyVec(vFs, b.vFs);
+    CopyVec(vGs, b.vGs);
+    CopyVec(vvCs, b.vvCs);
+    vUpdates = b.vUpdates;
+    vPfUpdates = b.vPfUpdates;
+    vFoConeShared = b.vFoConeShared;
   }
 };
 
