@@ -29,24 +29,41 @@ int Transduction::Resub(bool fMspf) {
   int nodes = CountNodes();
   TransductionBackup b;
   Save(b);
+  int count_ = count;
   list<int> targets = vObjs;
   for(list<int>::reverse_iterator it = targets.rbegin(); it != targets.rend(); it++) {
     if(nVerbose > 1)
       cout << "\tResubstitute " << *it << endl;
     if(vvFos[*it].empty())
       continue;
-    int count_ = count;
     count += TrivialMergeOne(*it);
+    vector<bool> lev;
+    if(fLevel) {
+      for(unsigned j = 0; j < vvFis[*it].size(); j++)
+        add(lev, vLevels[vvFis[*it][j] >> 1]);
+      if((int)lev.size() > vLevels[*it] + vSlacks[*it]) {
+        Load(b);
+        count = count_;
+        continue;
+      }
+      lev.resize(vLevels[*it] + vSlacks[*it]);
+    }
     bool fConnect = false;
     vector<bool> vMarks(nObjsAlloc);
     MarkFoCone_rec(vMarks, *it);
     list<int> targets2 = vObjs;
-    for(list<int>::iterator it2 = targets2.begin(); it2 != targets2.end(); it2++)
+    for(list<int>::iterator it2 = targets2.begin(); it2 != targets2.end(); it2++) {
+      if(fLevel && (int)lev.size() > vLevels[*it] + vSlacks[*it])
+        break;
       if(!vMarks[*it2] && !vvFos[*it2].empty())
-        if(TryConnect(*it, *it2, false) || TryConnect(*it, *it2, true)) {
-          fConnect |= true;
-          count--;
-        }
+        if(!fLevel || noexcess(lev, vLevels[*it2]))
+          if(TryConnect(*it, *it2, false) || TryConnect(*it, *it2, true)) {
+            fConnect = true;
+            count--;
+            if(fLevel)
+              add(lev, vLevels[*it2]);
+          }
+    }
     if(fConnect) {
       if(fMspf) {
         Build();
@@ -68,10 +85,14 @@ int Transduction::Resub(bool fMspf) {
     if(!vvFos[*it].empty() && vvFis[*it].size() > 2) {
       list<int>::iterator it2 = find(vObjs.begin(), vObjs.end(), *it);
       int pos = nObjsAlloc;
-      count += TrivialDecomposeOne(it2, pos);
+      if(fLevel)
+        count += BalancedDecomposeOne(it2, pos) + (fMspf? Mspf(true): Cspf(true));
+      else
+        count += TrivialDecomposeOne(it2, pos);
     }
     nodes = CountNodes();
     Save(b);
+    count_ = count;
   }
   return count;
 }
@@ -89,6 +110,7 @@ int Transduction::ResubMono(bool fMspf) {
     count += TrivialMergeOne(*it);
     TransductionBackup b;
     Save(b);
+    int count_ = count;
     for(unsigned i = 0; i < vPis.size(); i++) {
       if(vvFos[*it].empty())
         break;
@@ -108,10 +130,16 @@ int Transduction::ResubMono(bool fMspf) {
             vPfUpdates[*it] = true;
             count += fMspf? Mspf(true): Cspf(true);
           }
-          Save(b);
+          if(fLevel && CountLevels() > nMaxLevels) {
+            Load(b);
+            count = count_;
+          } else {
+            Save(b);
+            count_ = count;
+          }
         } else {
           Load(b);
-          count++;
+          count = count_;
         }
       }
     }
@@ -140,10 +168,16 @@ int Transduction::ResubMono(bool fMspf) {
               vPfUpdates[*it] = true;
               count += fMspf? Mspf(true): Cspf(true);
             }
-            Save(b);
+            if(fLevel && CountLevels() > nMaxLevels) {
+              Load(b);
+              count = count_;
+            } else {
+              Save(b);
+              count_ = count;
+            }
           } else {
             Load(b);
-            count++;
+            count = count_;
           }
         }
     }
@@ -152,7 +186,10 @@ int Transduction::ResubMono(bool fMspf) {
     if(vvFis[*it].size() > 2) {
       list<int>::iterator it2 = find(vObjs.begin(), vObjs.end(), *it);
       int pos = nObjsAlloc;
-      count += TrivialDecomposeOne(it2, pos);
+      if(fLevel)
+        count += BalancedDecomposeOne(it2, pos) + (fMspf? Mspf(true): Cspf(true));
+      else
+        count += TrivialDecomposeOne(it2, pos);
     }
   }
   return count;

@@ -109,6 +109,55 @@ int Transduction::TrivialDecompose() {
   return count;
 }
 
+int Transduction::BalancedDecomposeOne(list<int>::iterator const &it, int &pos) {
+  if(nVerbose > 3)
+    cout << "\t\t\tBalanced decompose " << *it << endl;
+  assert(fLevel);
+  assert(vvFis[*it].size() > 2);
+  for(int p = 1; p < (int)vvFis[*it].size(); p++) {
+    int f = vvFis[*it][p];
+    lit c = vvCs[*it][p];
+    int q = p - 1;
+    for(; q >= 0 && vLevels[f >> 1] > vLevels[vvFis[*it][q] >> 1]; q--) {
+      vvFis[*it][q + 1] = vvFis[*it][q];
+      vvCs[*it][q + 1] = vvCs[*it][q];
+    }
+    if(q + 1 != p) {
+      vvFis[*it][q + 1] = f;
+      vvCs[*it][q + 1] = c;
+    }
+  }
+  int count = 2 - vvFis[*it].size();
+  while(vvFis[*it].size() > 2) {
+    int f0 = vvFis[*it].back();
+    lit c0 = vvCs[*it].back();
+    Disconnect(*it, f0 >> 1, vvFis[*it].size() - 1, false, false);
+    int f1 = vvFis[*it].back();
+    lit c1 = vvCs[*it].back();
+    Disconnect(*it, f1 >> 1, vvFis[*it].size() - 1, false, false);
+    NewGate(pos);
+    Connect(pos, f1, false, false, c1);
+    Connect(pos, f0, false, false, c0);
+    Connect(*it, pos << 1, false, false);
+    Build(pos, vFs);
+    vLevels[pos] = max(vLevels[f0 >> 1], vLevels[f1 >> 1]) + 1;
+    vObjs.insert(it, pos);
+    int f = vvFis[*it].back();
+    lit c = vvCs[*it].back();
+    int q = (int)vvFis[*it].size() - 2;
+    for(; q >= 0 && vLevels[f >> 1] > vLevels[vvFis[*it][q] >> 1]; q--) {
+      vvFis[*it][q + 1] = vvFis[*it][q];
+      vvCs[*it][q + 1] = vvCs[*it][q];
+    }
+    if(q + 1 != (int)vvFis[*it].size() - 1) {
+      vvFis[*it][q + 1] = f;
+      vvCs[*it][q + 1] = c;
+    }
+  }
+  vPfUpdates[*it] = true;
+  return count;
+}
+
 int Transduction::Decompose() {
   if(nVerbose)
     cout << "Decompose" << endl;

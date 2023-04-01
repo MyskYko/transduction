@@ -109,6 +109,8 @@ int Transduction::Cspf(bool fSortRemove, int block, int block_i0) {
   }
   Build(false);
   assert(AllFalse(vPfUpdates));
+  if(fLevel)
+    ComputeLevel();
   return count;
 }
 

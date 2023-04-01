@@ -144,6 +144,8 @@ int Transduction::Mspf(bool fSort, int block, int block_i0) {
   }
   assert(AllFalse(vUpdates));
   assert(AllFalse(vPfUpdates));
+  if(fLevel)
+    ComputeLevel();
   return count;
 }
 

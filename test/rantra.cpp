@@ -8,15 +8,16 @@
 
 using namespace std;
 
-void Print(Transduction const & t, chrono::steady_clock::time_point const & start, string name) {
+void Print(Transduction const & t, chrono::steady_clock::time_point const & start, int n) {
   auto end = chrono::steady_clock::now();
   chrono::duration<double> elapsed_seconds = end - start;
-  cout << left << setw(20) << name << " : " << right << setw(10) << elapsed_seconds.count() << "s ";
+  cout << "Test " << n << ": time = " << right << setw(10) << elapsed_seconds.count() << "s, ";
   t.PrintStats();
 }
 
 int main(int argc, char ** argv) {
   bool fMspf = true;
+  bool fLevel = true;
   int N = 100;
   int M = 6;
   srand(time(NULL));
@@ -34,13 +35,15 @@ int main(int argc, char ** argv) {
   }
   cout << "};" << endl;
   aigman aig(argv[1]);
-  Transduction t(aig, 0, nSortType, nPiShuffle);
-  int nodes = aig.nGates;
+  Transduction t(aig, 0, nSortType, nPiShuffle, fLevel);
   int count = t.CountWires();
+  int level = fLevel? t.CountLevels(): 0;
   auto start = chrono::steady_clock::now();
   for(unsigned i = 0; i < Tests.size(); i++) {
     switch(Tests[i]) {
     case 0:
+      if(fLevel)
+        break;
       count -= t.TrivialMerge();
       if(t.State() == PfState::cspf)
         assert(t.CspfDebug());
@@ -48,6 +51,8 @@ int main(int argc, char ** argv) {
         assert(t.MspfDebug());
       break;
     case 1:
+      if(fLevel)
+        break;
       count -= t.TrivialDecompose();
       if(t.State() == PfState::cspf)
         assert(t.CspfDebug());
@@ -67,6 +72,8 @@ int main(int argc, char ** argv) {
       assert(fMspf? t.MspfDebug(): t.CspfDebug());
       break;
     case 5:
+      if(fLevel)
+        break;
       count -= t.ResubShared(fMspf);
       count -= fMspf? t.Mspf(true): t.Cspf(true);
       assert(fMspf? t.MspfDebug(): t.CspfDebug());
@@ -75,7 +82,7 @@ int main(int argc, char ** argv) {
       cout << "Wrong test pattern!" << endl;
       return 1;
     }
-    Print(t, start, "Test " + to_string(Tests[i]));
+    Print(t, start, Tests[i]);
     if(!t.Verify()) {
       cout << "Circuits are not equivalent!" << endl;
       return 1;
@@ -84,12 +91,12 @@ int main(int argc, char ** argv) {
       cout << "Wrong wire count!" << endl;
       return 1;
     }
-    if(t.CountNodes() < nodes) {
-      nodes = t.CountNodes();
-      t.GenerateAig(aig);
+    if(fLevel && level < t.CountLevels()) {
+      cout << "Increased level!" << endl;
+      return 1;
     }
+    t.GenerateAig(aig);
+    aig.write("tmp.aig");
   }
-  cout << nodes << endl;
-  aig.write("tmp.aig");
   return 0;
 }

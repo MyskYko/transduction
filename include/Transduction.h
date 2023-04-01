@@ -77,6 +77,9 @@ private:
   std::list<int> vObjs;
   std::vector<std::vector<int> > vvFis;
   std::vector<std::vector<int> > vvFos;
+  std::vector<int> vLevels;
+  std::vector<int> vSlacks;
+  std::vector<std::vector<int> > vvFiSlacks;
   std::vector<lit> vFs;
   std::vector<lit> vGs;
   std::vector<std::vector<lit> > vvCs;
@@ -91,9 +94,10 @@ public:
   int  CountGates() const;
   int  CountWires() const;
   int  CountNodes() const;
+  int  CountLevels() const;
   void GenerateAig(aigman &aig) const;
 
-  Transduction(aigman const &aig, int nVerbose, int nSortType = 0, int nPiShuffle = 0);
+  Transduction(aigman const &aig, int nVerbose, int nSortType = 0, int nPiShuffle = 0, bool fLevel = false);
   ~Transduction();
   bool BuildDebug();
 
@@ -117,15 +121,20 @@ public:
   int Optimize(bool fFirstMerge, bool fMspfMerge, bool fMspfResub, bool fInner, bool fOuter);
 
 private:
-  int nVerbose;
-  int nSortType;
-  int nObjsAlloc;
+  int  nVerbose;
+  int  nSortType;
+  bool fLevel;
+  int  nObjsAlloc;
+  int  nMaxLevels;
   PfState state;
   std::vector<int> vPis;
   std::vector<int> vPos;
   std::list<int> vObjs;
   std::vector<std::vector<int> > vvFis;
   std::vector<std::vector<int> > vvFos;
+  std::vector<int> vLevels;
+  std::vector<int> vSlacks;
+  std::vector<std::vector<int> > vvFiSlacks;
   std::vector<lit> vFs;
   std::vector<lit> vGs;
   std::vector<std::vector<lit> > vvCs;
@@ -147,6 +156,7 @@ private:
   bool IsFoConeShared_rec(std::vector<int> &vVisits, int i, int visitor) const;
   bool IsFoConeShared(int i) const;
   void ImportAig(aigman const &aig);
+  void ComputeLevel();
 
   void ShufflePis(int seed);
   void Build(int i, std::vector<lit> &vFs_) const;
@@ -165,6 +175,7 @@ private:
 
   int  TrivialMergeOne(int i);
   int  TrivialDecomposeOne(std::list<int>::iterator const &it, int &pos);
+  int  BalancedDecomposeOne(std::list<int>::iterator const &it, int &pos);
 
   bool TryConnect(int i, int i0, bool c0);
 
@@ -191,6 +202,9 @@ private:
     b.vObjs = vObjs;
     b.vvFis = vvFis;
     b.vvFos = vvFos;
+    b.vLevels = vLevels;
+    b.vSlacks = vSlacks;
+    b.vvFiSlacks = vvFiSlacks;
     CopyVec(b.vFs, vFs);
     CopyVec(b.vGs, vGs);
     CopyVec(b.vvCs, vvCs);
@@ -204,12 +218,44 @@ private:
     vObjs = b.vObjs;
     vvFis = b.vvFis;
     vvFos = b.vvFos;
+    vLevels = b.vLevels;
+    vSlacks = b.vSlacks;
+    vvFiSlacks = b.vvFiSlacks;
     CopyVec(vFs, b.vFs);
     CopyVec(vGs, b.vGs);
     CopyVec(vvCs, b.vvCs);
     vUpdates = b.vUpdates;
     vPfUpdates = b.vPfUpdates;
     vFoConeShared = b.vFoConeShared;
+  }
+  inline void add(std::vector<bool> &a, unsigned i) {
+    if(a.size() <= i) {
+      a.resize(i + 1);
+      a[i] = true;
+      return;
+    }
+    for(; i < a.size() && a[i]; i++)
+      a[i] = false;
+    if(i == a.size())
+      a.resize(i + 1);
+    a[i] = true;
+  }
+  inline bool balanced(std::vector<bool> const &a) {
+    for(unsigned i = 0; i < a.size() - 1; i++)
+      if(a[i])
+        return false;
+    return true;
+  }
+  inline bool noexcess(std::vector<bool> const &a, unsigned i) {
+    if(a.size() <= i)
+      return false;
+    for(unsigned j = i; j < a.size(); j++)
+      if(!a[j])
+        return true;
+    for(unsigned j = 0; j < i; j++)
+      if(a[j])
+        return false;
+    return true;
   }
 
 public:
@@ -220,7 +266,12 @@ public:
     int gates = CountGates();
     int wires = CountWires();
     int nodes = wires - gates;
-    std::cout << "nodes " << std::setw(5) << nodes << " gates " << std::setw(5) << gates << " wires " << std::setw(5) << wires << std::endl;
+    std::cout << "nodes = " << std::setw(5) << nodes << ", "
+              << "gates = " << std::setw(5) << gates << ", "
+              << "wires = " << std::setw(5) << wires;
+    if(fLevel)
+      std::cout << ", level = " << std::setw(5) << CountLevels();
+    std::cout << std::endl;
   }
   inline bool Verify() const {
     for(unsigned j = 0; j < vPos.size(); j++) {
@@ -232,6 +283,28 @@ public:
         return false;
     }
     return true;
+  }
+  inline void PrintObjs() const {
+    for(std::list<int>::const_iterator it = vObjs.begin(); it != vObjs.end(); it++) {
+      std::cout << "Gate " << *it << ":";
+      if(fLevel)
+        std::cout << " Level = " << vLevels[*it] << ", Slack = " << vSlacks[*it];
+      std::cout << std::endl;
+      std::string delim = "";
+      std::cout << "\tFis: ";
+      for(unsigned j = 0; j < vvFis[*it].size(); j++) {
+        std::cout << delim << (vvFis[*it][j] >> 1) << "(" << (vvFis[*it][j] & 1) << ")";
+        delim = ", ";
+      }
+      std::cout << std::endl;
+      delim = "";
+      std::cout << "\tFos: ";
+      for(unsigned j = 0; j < vvFos[*it].size(); j++) {
+        std::cout << delim << vvFos[*it][j];
+        delim = ", ";
+      }
+      std::cout << std::endl;
+    }
   }
 };
 

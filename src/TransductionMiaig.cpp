@@ -18,6 +18,12 @@ int Transduction::CountWires() const {
 int Transduction::CountNodes() const {
   return CountWires() - CountGates();
 }
+int Transduction::CountLevels() const {
+  int count = 0;
+  for(unsigned i = 0; i < vPos.size(); i++)
+    count = max(count, vLevels[vvFis[vPos[i]][0] >> 1]);
+  return count;
+}
 
 void Transduction::SortObjs_rec(list<int>::iterator const &it) {
   for(unsigned j = 0; j < vvFis[*it].size(); j++) {
@@ -158,6 +164,11 @@ void Transduction::NewGate(int &pos) {
     nObjsAlloc++;
     vvFis.resize(nObjsAlloc);
     vvFos.resize(nObjsAlloc);
+    if(fLevel) {
+      vLevels.resize(nObjsAlloc);
+      vSlacks.resize(nObjsAlloc);
+      vvFiSlacks.resize(nObjsAlloc);
+    }
     vFs.resize(nObjsAlloc, LitMax());
     vGs.resize(nObjsAlloc, LitMax());
     vvCs.resize(nObjsAlloc);
@@ -206,6 +217,11 @@ void Transduction::ImportAig(aigman const &aig) {
   nObjsAlloc = aig.nObjs + aig.nPos;
   vvFis.resize(nObjsAlloc);
   vvFos.resize(nObjsAlloc);
+  if(fLevel) {
+    vLevels.resize(nObjsAlloc);
+    vSlacks.resize(nObjsAlloc);
+    vvFiSlacks.resize(nObjsAlloc);
+  }
   vFs.resize(nObjsAlloc, LitMax());
   vGs.resize(nObjsAlloc, LitMax());
   vvCs.resize(nObjsAlloc);
@@ -264,5 +280,39 @@ void Transduction::GenerateAig(aigman &aig) const {
     int c0 = vvFis[vPos[i]][0] & 1;
     aig.vPos.push_back(values[i0] ^ c0);
     aig.nPos++;
+  }
+}
+
+void Transduction::ComputeLevel() {
+  for(list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++) {
+    if(vvFis[*it].size() == 2)
+      vLevels[*it] = max(vLevels[vvFis[*it][0] >> 1], vLevels[vvFis[*it][1] >> 1]) + 1;
+    else {
+      vector<bool> lev;
+      for(unsigned j = 0; j < vvFis[*it].size(); j++)
+        add(lev, vLevels[vvFis[*it][j] >> 1]);
+      if(balanced(lev))
+        vLevels[*it] = (int)lev.size() - 1;
+      else
+        vLevels[*it] = (int)lev.size();
+    }
+  }
+  if(nMaxLevels == -1)
+    nMaxLevels = CountLevels();
+  for(unsigned i = 0; i < vPos.size(); i++) {
+    vvFiSlacks[vPos[i]].resize(1);
+    vvFiSlacks[vPos[i]][0] = nMaxLevels - vLevels[vvFis[vPos[i]][0] >> 1];
+  }
+  for(list<int>::reverse_iterator it = vObjs.rbegin(); it != vObjs.rend(); it++) {
+    vSlacks[*it] = nMaxLevels;
+    for(unsigned j = 0; j < vvFos[*it].size(); j++) {
+      int k = vvFos[*it][j];
+      int l = FindFi(k, *it);
+      assert(l >= 0);
+      vSlacks[*it] = min(vSlacks[*it], vvFiSlacks[k][l]);
+    }
+    vvFiSlacks[*it].resize(vvFis[*it].size());
+    for(unsigned j = 0; j < vvFis[*it].size(); j++)
+      vvFiSlacks[*it][j] = vSlacks[*it] + vLevels[*it] - 1 - vLevels[vvFis[*it][j] >> 1];
   }
 }
