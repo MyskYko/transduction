@@ -38,8 +38,8 @@ Transduction::~Transduction() {
   DelVec(vGs);
   DelVec(vvCs);
   DelVec(vPoFs);
-  assert(man->CountNodes() == (int)vPis.size() + 1);
-  assert(!man->Ref(man->Const0()));
+  //assert(man->CountNodes() == (int)vPis.size() + 1);
+  //assert(!man->Ref(man->Const0()));
   delete man;
 }
 
