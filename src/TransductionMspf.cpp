@@ -17,7 +17,7 @@ void Transduction::BuildFoConeCompl(int i, vector<lit> &vPoFsCompl) const {
   for(list<int>::const_iterator it = vObjs.begin(); it != vObjs.end(); it++)
     if(vUpdatesCompl[*it]) {
       Build(*it, vFsCompl);
-      if(vFsCompl[*it] != vFs[*it])
+      if(!man->LitIsEq(vFsCompl[*it], vFs[*it]))
         for(unsigned j = 0; j < vvFos[*it].size(); j++)
           vUpdatesCompl[vvFos[*it][j]] = true;
     }
@@ -40,7 +40,7 @@ bool Transduction::MspfCalcG(int i) {
   }
   DelVec(vPoFsCompl);
   DecRef(g);
-  return vGs[i] != g;
+  return !man->LitIsEq(vGs[i], g);
 }
 
 int Transduction::MspfCalcC(int i, int block_i0) {
@@ -58,7 +58,7 @@ int Transduction::MspfCalcC(int i, int block_i0) {
       Disconnect(i, i0, j);
       DecRef(x);
       return RemoveRedundantFis(i, block_i0, j) + 1;
-    } else if(vvCs[i][j] != x) {
+    } else if(!man->LitIsEq(vvCs[i][j], x)) {
       Update(vvCs[i][j], x);
       vPfUpdates[i0] = true;
     }
@@ -156,7 +156,7 @@ bool Transduction::MspfDebug() {
   CopyVec(vvCsOld, vvCs);
   state = PfState::none;
   Mspf();
-  bool r = vGsOld == vGs && vvCsOld == vvCs;
+  bool r = LitVecIsEq(vGsOld, vGs) && LitVecIsEq(vvCsOld, vvCs);
   DelVec(vGsOld);
   DelVec(vvCsOld);
   return r;

@@ -53,7 +53,7 @@ int Transduction::CalcC(int i) {
         cout << "\t\t\t\tCspf remove wire " << i0 << "(" << (vvFis[i][j] & 1) << ")" << " -> " << i << endl;
       Disconnect(i, i0, j--);
       count++;
-    } else if(vvCs[i][j] != x) {
+    } else if(!man->LitIsEq(vvCs[i][j], x)) {
       Update(vvCs[i][j], x);
       vPfUpdates[i0] = true;
     }
@@ -121,7 +121,7 @@ bool Transduction::CspfDebug() {
   CopyVec(vvCsOld, vvCs);
   state = PfState::none;
   Cspf();
-  bool r = vGsOld == vGs && vvCsOld == vvCs;
+  bool r = LitVecIsEq(vGsOld, vGs) && LitVecIsEq(vvCsOld, vvCs);
   DelVec(vGsOld);
   DelVec(vvCsOld);
   return r;

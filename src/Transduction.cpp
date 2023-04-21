@@ -65,7 +65,7 @@ void Transduction::Build(bool fPfUpdate) {
       IncRef(x);
       Build(*it, vFs);
       DecRef(x);
-      if(x != vFs[*it])
+      if(!man->LitIsEq(x, vFs[*it]))
         for(unsigned j = 0; j < vvFos[*it].size(); j++)
           vUpdates[vvFos[*it][j]] = true;
     }
@@ -82,7 +82,7 @@ bool Transduction::BuildDebug() {
   vector<lit> vFsOld;
   CopyVec(vFsOld, vFs);
   Build(false);
-  bool r = vFsOld == vFs;
+  bool r = LitVecIsEq(vFsOld, vFs);
   DelVec(vFsOld);
   return r;
 }

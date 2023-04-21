@@ -50,6 +50,22 @@ protected:
     for(unsigned i = 0; i < v.size(); i++)
       CopyVec(v[i], u[i]);
   }
+  inline bool LitVecIsEq(std::vector<lit> const &v, std::vector<lit> const &u) const {
+    if(v.size() != u.size())
+      return false;
+    for(unsigned i = 0; i < v.size(); i++)
+      if(!man->LitIsEq(v[i], u[i]))
+        return false;
+    return true;
+  }
+  inline bool LitVecIsEq(std::vector<std::vector<lit> > const &v, std::vector<std::vector<lit> > const &u) const {
+    if(v.size() != u.size())
+      return false;
+    for(unsigned i = 0; i < v.size(); i++)
+      if(!LitVecIsEq(v[i], u[i]))
+        return false;
+    return true;
+  }
   inline lit Xor(lit x, lit y) const {
     lit f = man->And(x, man->LitNot(y));
     man->IncRef(f);
