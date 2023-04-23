@@ -6,8 +6,8 @@
 #include <aig.hpp>
 // #include <NextBdd.h>
 // using namespace NextBdd;
- #include "ttman.h"
- using namespace Ttman;
+#include "ttman.h"
+using namespace Ttman;
 
 enum class PfState {none, cspf, mspf};
 
