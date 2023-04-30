@@ -36,6 +36,7 @@ namespace Ttman {
     const int lww = 6; // log word width
     const word one = 0xffffffffffffffffull;
     static const word vars[];
+    static const word ones[];
     
     int  nVars;
     bvar nObjs;
@@ -84,12 +85,17 @@ namespace Ttman {
     void IncRef(lit x) { if(Ref(x) != RefMax()) vRefs[Lit2Bvar(x)]++; }
     void DecRef(lit x) { if(Ref(x) != RefMax()) vRefs[Lit2Bvar(x)]--; }
     lit  Or(lit x, lit y) { return LitNot(And(LitNot(x), LitNot(y))); }
-    size OneCount(lit x) const {
-      if(LitIsCompl(x)) {
-        return ((size)1 << std::max(nVars, 6)) - vOneCounts[Lit2Bvar(x)];
-      } else {
-        return vOneCounts[Lit2Bvar(x)];
+    size OneCount(lit x) {
+      bvar a = Lit2Bvar(x);
+      if(vOneCounts[a] == SizeMax()) {
+        if(nVars > 6) {
+          vOneCounts[a] = 0;
+          for(size j = 0; j < nSize; j++)
+            vOneCounts[a] += std::bitset<64>(vVals[nSize * a + j]).count();
+        } else
+          vOneCounts[a] = std::bitset<64>(vVals[nSize * a] & ones[nVars]).count();
       }
+      return LitIsCompl(x)? ((size)1 << nVars) - vOneCounts[a]: vOneCounts[a];
     }
     bool LitIsEq(lit x, lit y) {
       if(x == y)
@@ -139,7 +145,7 @@ namespace Ttman {
     nTotalSize = nSize << p.nObjsAllocLog;
     vVals.resize(nTotalSize);
     vRefs.resize(nObjsAlloc);
-    vOneCounts.resize(nObjsAlloc);
+    vOneCounts.resize(nObjsAlloc, SizeMax());
     nObjs = 1;
     for(int i = 0; i < 6 && i < nVars; i++) {
       for(size j = 0; j < nSize; j++)
@@ -189,7 +195,7 @@ namespace Ttman {
       std::cout << "Reallocating " << nObjsAlloc << " nodes" << std::endl;
     vVals.resize(nTotalSize);
     vRefs.resize(nObjsAlloc);
-    vOneCounts.resize(nObjsAlloc);
+    vOneCounts.resize(nObjsAlloc, SizeMax());
     return true;
   }
   
@@ -197,8 +203,10 @@ namespace Ttman {
     if(nVerbose >= 2)
       std::cout << "Garbage collect" << std::endl;
     for(bvar a = nVars + 1; a < nObjs; a++)
-      if(!vRefs[a])
+      if(!vRefs[a]) {
         vDeads.push_back(a);
+        vOneCounts[a] = SizeMax();
+      }
     return vDeads.size();
   }
   
