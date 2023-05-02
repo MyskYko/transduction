@@ -4,26 +4,24 @@
 #include <list>
 #include <set>
 #include <algorithm>
+#include <iomanip>
 
 #include <cassert>
 
 #include <aig.hpp>
-// #include <NextBdd.h>
-// using namespace NextBdd;
-#include "ttman.h"
-using namespace Ttman;
 
 enum class PfState {none, cspf, mspf};
 
+template <class Man, class lit, lit LitMax>
 class ManUtil {
 protected:
   Man *man;
   inline void IncRef(lit x) const {
-    if(x != LitMax())
+    if(x != LitMax)
       man->IncRef(x);
   }
   inline void DecRef(lit x) const {
-    if(x != LitMax())
+    if(x != LitMax)
       man->DecRef(x);
   }
   inline void Update(lit &x, lit y) const {
@@ -82,7 +80,8 @@ protected:
   }
 };
 
-class TransductionBackup: ManUtil {
+template <class Man, class lit, lit LitMax>
+class TransductionBackup: ManUtil<Man, lit, LitMax> {
 private:
   int nObjsAlloc;
   PfState state;
@@ -98,19 +97,21 @@ private:
   std::vector<bool> vUpdates;
   std::vector<bool> vPfUpdates;
   std::vector<bool> vFoConeShared;
+  template <class Man_, class Param, class lit_, lit_ LitMax_>
   friend class Transduction;
 
 public:
   ~TransductionBackup() {
-    if(man) {
-      DelVec(vFs);
-      DelVec(vGs);
-      DelVec(vvCs);
+    if(this->man) {
+      this->DelVec(vFs);
+      this->DelVec(vGs);
+      this->DelVec(vvCs);
     }
   }
 };
 
-class Transduction: ManUtil {
+template <class Man, class Param, class lit, lit LitMax>
+class Transduction: ManUtil<Man, lit, LitMax> {
 private:
   int  nVerbose;
   int  nSortType;
@@ -178,7 +179,7 @@ private: // MIAIG
       }
     }
   }
-  inline void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = LitMax()) {
+  inline void Connect(int i, int f, bool fSort = false, bool fUpdate = true, lit c = LitMax) {
     int i0 = f >> 1;
     if(nVerbose > 5)
       std::cout << "\t\t\t\t\tConnect " << i0 << "(" << (f & 1) << ")" << " to " << i << std::endl;
@@ -187,7 +188,7 @@ private: // MIAIG
     vvFos[i0].push_back(i);
     if(fUpdate)
       vUpdates[i] = true;
-    IncRef(c);
+    this->IncRef(c);
     vvCs[i].push_back(c);
     if(fSort && !vvFos[i].empty() && !vvFis[i0].empty()) {
       std::list<int>::iterator it = find(vObjs.begin(), vObjs.end(), i);
@@ -206,7 +207,7 @@ private: // MIAIG
       std::cout << "\t\t\t\t\tDisconnect " << i0 << "(" << (vvFis[i][j] & 1) << ")" << " from " << i << std::endl;
     vvFos[i0].erase(std::find(vvFos[i0].begin(), vvFos[i0].end(), i));
     vvFis[i].erase(vvFis[i].begin() + j);
-    DecRef(vvCs[i][j]);
+    this->DecRef(vvCs[i][j]);
     vvCs[i].erase(vvCs[i].begin() + j);
     if(fUpdate)
       vUpdates[i] = true;
@@ -225,10 +226,10 @@ private: // MIAIG
     }
     int count = vvFis[i].size();
     vvFis[i].clear();
-    DecRef(vFs[i]);
-    DecRef(vGs[i]);
-    vFs[i] = vGs[i] = LitMax();
-    DelVec(vvCs[i]);
+    this->DecRef(vFs[i]);
+    this->DecRef(vGs[i]);
+    vFs[i] = vGs[i] = LitMax;
+    this->DelVec(vvCs[i]);
     vUpdates[i] = vPfUpdates[i] = false;
     return count;
   }
@@ -249,7 +250,7 @@ private: // MIAIG
       assert(l >= 0);
       int fc = f ^ (vvFis[k][l] & 1);
       if(find(vvFis[k].begin(), vvFis[k].end(), fc) != vvFis[k].end()) {
-        DecRef(vvCs[k][l]);
+        this->DecRef(vvCs[k][l]);
         vvCs[k].erase(vvCs[k].begin() + l);
         vvFis[k].erase(vvFis[k].begin() + l);
         count++;
@@ -273,7 +274,7 @@ private: // MIAIG
       int l = FindFi(k, i);
       assert(l >= 0);
       bool fc = c ^ (vvFis[k][l] & 1);
-      DecRef(vvCs[k][l]);
+      this->DecRef(vvCs[k][l]);
       vvCs[k].erase(vvCs[k].begin() + l);
       vvFis[k].erase(vvFis[k].begin() + l);
       if(fc) {
@@ -302,8 +303,8 @@ private: // MIAIG
         vSlacks.resize(nObjsAlloc);
         vvFiSlacks.resize(nObjsAlloc);
       }
-      vFs.resize(nObjsAlloc, LitMax());
-      vGs.resize(nObjsAlloc, LitMax());
+      vFs.resize(nObjsAlloc, LitMax);
+      vGs.resize(nObjsAlloc, LitMax);
       vvCs.resize(nObjsAlloc);
       vUpdates.resize(nObjsAlloc);
       vPfUpdates.resize(nObjsAlloc);
@@ -431,11 +432,11 @@ private: // Cost function
     case 0:
       return std::find(find(vObjs.begin(), vObjs.end(), a0), vObjs.end(), b0) == vObjs.end();
     case 1:
-      return man->OneCount(man->LitNotCond(vFs[a0], ac)) < man->OneCount(man->LitNotCond(vFs[b0], bc));
+      return this->man->OneCount(this->man->LitNotCond(vFs[a0], ac)) < this->man->OneCount(this->man->LitNotCond(vFs[b0], bc));
     case 2:
-      return man->OneCount(vFs[a0]) < man->OneCount(vFs[b0]);
+      return this->man->OneCount(vFs[a0]) < this->man->OneCount(vFs[b0]);
     case 3:
-      return man->OneCount(man->LitNot(vFs[a0])) < man->OneCount(vFs[b0]); // pseudo random
+      return this->man->OneCount(this->man->LitNot(vFs[a0])) < this->man->OneCount(vFs[b0]); // pseudo random
     default:
       return false; // no sorting
     }
@@ -468,19 +469,19 @@ private: // Symbolic simulation
   inline lit LitFi(int i, int j) const {
     int i0 = vvFis[i][j] >> 1;
     bool c0 = vvFis[i][j] & 1;
-    return man->LitNotCond(vFs[i0], c0);
+    return this->man->LitNotCond(vFs[i0], c0);
   }
   inline lit LitFi(int i, int j, std::vector<lit> const &vFs_) const {
     int i0 = vvFis[i][j] >> 1;
     bool c0 = vvFis[i][j] & 1;
-    return man->LitNotCond(vFs_[i0], c0);
+    return this->man->LitNotCond(vFs_[i0], c0);
   }
   inline void Build(int i, std::vector<lit> &vFs_) const {
     if(nVerbose > 4)
       std::cout << "\t\t\t\tBuild " << i << std::endl;
-    Update(vFs_[i], man->Const1());
+    this->Update(vFs_[i], this->man->Const1());
     for(unsigned j = 0; j < vvFis[i].size(); j++)
-      Update(vFs_[i], man->And(vFs_[i], LitFi(i, j, vFs_)));
+      this->Update(vFs_[i], this->man->And(vFs_[i], LitFi(i, j, vFs_)));
   }
   inline void Build(bool fPfUpdate = true) {
     if(nVerbose > 3)
@@ -488,10 +489,10 @@ private: // Symbolic simulation
     for(std::list<int>::iterator it = vObjs.begin(); it != vObjs.end(); it++)
       if(vUpdates[*it]) {
         lit x = vFs[*it];
-        IncRef(x);
+        this->IncRef(x);
         Build(*it, vFs);
-        DecRef(x);
-        if(!man->LitIsEq(x, vFs[*it]))
+        this->DecRef(x);
+        if(!this->man->LitIsEq(x, vFs[*it]))
           for(unsigned j = 0; j < vvFos[*it].size(); j++)
             vUpdates[vvFos[*it][j]] = true;
       }
@@ -506,21 +507,21 @@ private: // Symbolic simulation
     if(nVerbose > 3)
       std::cout << "\t\t\tBuild with complemented " << i << std::endl;
     std::vector<lit> vFsCompl;
-    CopyVec(vFsCompl, vFs);
-    vFsCompl[i] = man->LitNot(vFs[i]);
+    this->CopyVec(vFsCompl, vFs);
+    vFsCompl[i] = this->man->LitNot(vFs[i]);
     std::vector<bool> vUpdatesCompl(nObjsAlloc);
     for(unsigned j = 0; j < vvFos[i].size(); j++)
       vUpdatesCompl[vvFos[i][j]] = true;
     for(std::list<int>::const_iterator it = vObjs.begin(); it != vObjs.end(); it++)
       if(vUpdatesCompl[*it]) {
         Build(*it, vFsCompl);
-        if(!man->LitIsEq(vFsCompl[*it], vFs[*it]))
+        if(!this->man->LitIsEq(vFsCompl[*it], vFs[*it]))
           for(unsigned j = 0; j < vvFos[*it].size(); j++)
             vUpdatesCompl[vvFos[*it][j]] = true;
       }
     for(unsigned j = 0; j < vPos.size(); j++)
-      Update(vPoFsCompl[j], LitFi(vPos[j], 0, vFsCompl));
-    DelVec(vFsCompl);
+      this->Update(vPoFsCompl[j], LitFi(vPos[j], 0, vFsCompl));
+    this->DelVec(vFsCompl);
   }
 
 private: // CSPF
@@ -529,15 +530,15 @@ private: // CSPF
     for(; j < vvFis[i].size(); j++) {
       if(block_i0 == (vvFis[i][j] >> 1))
         continue;
-      lit x = man->Const1();
-      IncRef(x);
+      lit x = this->man->Const1();
+      this->IncRef(x);
       for(unsigned jj = 0; jj < vvFis[i].size(); jj++)
         if(j != jj)
-          Update(x, man->And(x, LitFi(i, jj)));
-      Update(x, man->Or(man->LitNot(x), vGs[i]));
-      Update(x, man->Or(x, LitFi(i, j)));
-      DecRef(x);
-      if(man->IsConst1(x)) {
+          this->Update(x, this->man->And(x, LitFi(i, jj)));
+      this->Update(x, this->man->Or(this->man->LitNot(x), vGs[i]));
+      this->Update(x, this->man->Or(x, LitFi(i, j)));
+      this->DecRef(x);
+      if(this->man->IsConst1(x)) {
         int i0 = vvFis[i][j] >> 1;
         if(nVerbose > 4)
           std::cout << "\t\t\t\tRRF remove wire " << i0 << "(" << (vvFis[i][j] & 1) << ")" << " -> " << i << std::endl;
@@ -548,33 +549,33 @@ private: // CSPF
     return count;
   }
   inline void CalcG(int i) {
-    Update(vGs[i], man->Const1());
+    this->Update(vGs[i], this->man->Const1());
     for(unsigned j = 0; j < vvFos[i].size(); j++) {
       int k = vvFos[i][j];
       int l = FindFi(k, i);
       assert(l >= 0);
-      Update(vGs[i], man->And(vGs[i], vvCs[k][l]));
+      this->Update(vGs[i], this->man->And(vGs[i], vvCs[k][l]));
     }
   }
   inline int CalcC(int i) {
     int count = 0;
     for(unsigned j = 0; j < vvFis[i].size(); j++) {
-      lit x = man->Const1();
-      IncRef(x);
+      lit x = this->man->Const1();
+      this->IncRef(x);
       for(unsigned jj = j + 1; jj < vvFis[i].size(); jj++)
-        Update(x, man->And(x, LitFi(i, jj)));
-      Update(x, man->Or(man->LitNot(x), vGs[i]));
+        this->Update(x, this->man->And(x, LitFi(i, jj)));
+      this->Update(x, this->man->Or(this->man->LitNot(x), vGs[i]));
       int i0 = vvFis[i][j] >> 1;
-      if(man->IsConst1(man->Or(x, LitFi(i, j)))) {
+      if(this->man->IsConst1(this->man->Or(x, LitFi(i, j)))) {
         if(nVerbose > 4)
           std::cout << "\t\t\t\tCspf remove wire " << i0 << "(" << (vvFis[i][j] & 1) << ")" << " -> " << i << std::endl;
         Disconnect(i, i0, j--);
         count++;
-      } else if(!man->LitIsEq(vvCs[i][j], x)) {
-        Update(vvCs[i][j], x);
+      } else if(!this->man->LitIsEq(vvCs[i][j], x)) {
+        this->Update(vvCs[i][j], x);
         vPfUpdates[i0] = true;
       }
-      DecRef(x);
+      this->DecRef(x);
     }
     return count;
   }
@@ -633,41 +634,41 @@ private: // CSPF
 private: // MSPF
   inline bool MspfCalcG(int i) {
     lit g = vGs[i];
-    IncRef(g);
-    std::vector<lit> vPoFsCompl(vPos.size(), LitMax());
+    this->IncRef(g);
+    std::vector<lit> vPoFsCompl(vPos.size(), LitMax);
     BuildFoConeCompl(i, vPoFsCompl);
-    Update(vGs[i], man->Const1());
+    this->Update(vGs[i], this->man->Const1());
     for(unsigned j = 0; j < vPos.size(); j++) {
-      lit x = man->LitNot(Xor(vPoFs[j], vPoFsCompl[j]));
-      IncRef(x);
-      Update(x, man->Or(x, vvCs[vPos[j]][0]));
-      Update(vGs[i], man->And(vGs[i], x));
-      DecRef(x);
+      lit x = this->man->LitNot(this->Xor(vPoFs[j], vPoFsCompl[j]));
+      this->IncRef(x);
+      this->Update(x, this->man->Or(x, vvCs[vPos[j]][0]));
+      this->Update(vGs[i], this->man->And(vGs[i], x));
+      this->DecRef(x);
     }
-    DelVec(vPoFsCompl);
-    DecRef(g);
-    return !man->LitIsEq(vGs[i], g);
+    this->DelVec(vPoFsCompl);
+    this->DecRef(g);
+    return !this->man->LitIsEq(vGs[i], g);
   }
   inline int MspfCalcC(int i, int block_i0 = -1) {
     for(unsigned j = 0; j < vvFis[i].size(); j++) {
-      lit x = man->Const1();
-      IncRef(x);
+      lit x = this->man->Const1();
+      this->IncRef(x);
       for(unsigned jj = 0; jj < vvFis[i].size(); jj++)
         if(j != jj)
-          Update(x, man->And(x, LitFi(i, jj)));
-      Update(x, man->Or(man->LitNot(x), vGs[i]));
+          this->Update(x, this->man->And(x, LitFi(i, jj)));
+      this->Update(x, this->man->Or(this->man->LitNot(x), vGs[i]));
       int i0 = vvFis[i][j] >> 1;
-      if(i0 != block_i0 && man->IsConst1(man->Or(x, LitFi(i, j)))) {
+      if(i0 != block_i0 && this->man->IsConst1(this->man->Or(x, LitFi(i, j)))) {
         if(nVerbose > 4)
           std::cout << "\t\t\t\tMspf remove wire " << i0 << "(" << (vvFis[i][j] & 1) << ")" << " -> " << i << std::endl;
         Disconnect(i, i0, j);
-        DecRef(x);
+        this->DecRef(x);
         return RemoveRedundantFis(i, block_i0, j) + 1;
-      } else if(!man->LitIsEq(vvCs[i][j], x)) {
-        Update(vvCs[i][j], x);
+      } else if(!this->man->LitIsEq(vvCs[i][j], x)) {
+        this->Update(vvCs[i][j], x);
         vPfUpdates[i0] = true;
       }
-      DecRef(x);
+      this->DecRef(x);
     }
     return 0;
   }
@@ -705,9 +706,9 @@ private: // MSPF
         if(vFoConeShared[*it]) {
           vFoConeShared[*it] = false;
           lit g = vGs[*it];
-          IncRef(g);
+          this->IncRef(g);
           CalcG(*it);
-          DecRef(g);
+          this->DecRef(g);
           if(g == vGs[*it] && !vPfUpdates[*it]) {
             it++;
             continue;
@@ -720,8 +721,8 @@ private: // MSPF
           it++;
           continue;
         }
-        bool IsConst1 = man->IsConst1(man->Or(vGs[*it], vFs[*it]));
-        bool IsConst0 = IsConst1? false: man->IsConst1(man->Or(vGs[*it], man->LitNot(vFs[*it])));
+        bool IsConst1 = this->man->IsConst1(this->man->Or(vGs[*it], vFs[*it]));
+        bool IsConst0 = IsConst1? false: this->man->IsConst1(this->man->Or(vGs[*it], this->man->LitNot(vFs[*it])));
         if(IsConst1 || IsConst0) {
           count += ReplaceByConst(*it, (int)IsConst1);
           vObjs.erase(--(it.base()));
@@ -775,8 +776,8 @@ private: // Merge/decompose one
       vPfUpdates[i] = vPfUpdates[i] | vPfUpdates[i0];
       vvFos[i0].erase(find(vvFos[i0].begin(), vvFos[i0].end(), i));
       count++;
-      std::vector<int>::iterator itfi = vFisOld.begin() + j;
-      std::vector<lit>::iterator itc = vCsOld.begin() + j;
+      typename std::vector<int>::iterator itfi = vFisOld.begin() + j;
+      typename std::vector<lit>::iterator itc = vCsOld.begin() + j;
       for(unsigned jj = 0; jj < vvFis[i0].size(); jj++) {
         int f = vvFis[i0][jj];
         std::vector<int>::iterator it = find(vvFis[i].begin(), vvFis[i].end(), f);
@@ -784,7 +785,7 @@ private: // Merge/decompose one
           vvFos[f >> 1].push_back(i);
           itfi = vFisOld.insert(itfi, f);
           itc = vCsOld.insert(itc, vvCs[i0][jj]);
-          IncRef(*itc);
+          this->IncRef(*itc);
           itfi++;
           itc++;
           count--;
@@ -795,7 +796,7 @@ private: // Merge/decompose one
       count += Remove(i0, false);
       vObjs.erase(find(vObjs.begin(), vObjs.end(), i0));
       vFisOld.erase(itfi);
-      DecRef(*itc);
+      this->DecRef(*itc);
       vCsOld.erase(itc);
       j--;
     }
@@ -818,14 +819,14 @@ private: // Merge/decompose one
       Connect(pos, f0, false, false, c0);
       if(!vPfUpdates[*it]) {
         if(state == PfState::cspf)
-          Update(vGs[pos], vGs[*it]);
+          this->Update(vGs[pos], vGs[*it]);
         else if(state == PfState::mspf) {
-          lit x = man->Const1();
-          IncRef(x);
+          lit x = this->man->Const1();
+          this->IncRef(x);
           for(unsigned j = 0; j < vvFis[*it].size(); j++)
-            Update(x, man->And(x, LitFi(*it, j)));
-          Update(vGs[pos], man->Or(man->LitNot(x), vGs[*it]));
-          DecRef(x);
+            this->Update(x, this->man->And(x, LitFi(*it, j)));
+          this->Update(vGs[pos], this->man->Or(this->man->LitNot(x), vGs[*it]));
+          this->DecRef(x);
         }
       }
       Connect(*it, pos << 1, false, false, vGs[pos]);
@@ -975,8 +976,8 @@ public: // Merge/decompose
   }
 
 private: // Save/load
-  inline void Save(TransductionBackup &b) const {
-    b.man = man;
+  inline void Save(TransductionBackup<Man, lit, LitMax> &b) const {
+    b.man = this->man;
     b.nObjsAlloc = nObjsAlloc;
     b.state = state;
     b.vObjs = vObjs;
@@ -985,14 +986,14 @@ private: // Save/load
     b.vLevels = vLevels;
     b.vSlacks = vSlacks;
     b.vvFiSlacks = vvFiSlacks;
-    CopyVec(b.vFs, vFs);
-    CopyVec(b.vGs, vGs);
-    CopyVec(b.vvCs, vvCs);
+    this->CopyVec(b.vFs, vFs);
+    this->CopyVec(b.vGs, vGs);
+    this->CopyVec(b.vvCs, vvCs);
     b.vUpdates = vUpdates;
     b.vPfUpdates = vPfUpdates;
     b.vFoConeShared = vFoConeShared;
   }
-  inline void Load(TransductionBackup const &b) {
+  inline void Load(TransductionBackup<Man, lit, LitMax> const &b) {
     nObjsAlloc = b.nObjsAlloc;
     state = b.state;
     vObjs = b.vObjs;
@@ -1001,9 +1002,9 @@ private: // Save/load
     vLevels = b.vLevels;
     vSlacks = b.vSlacks;
     vvFiSlacks = b.vvFiSlacks;
-    CopyVec(vFs, b.vFs);
-    CopyVec(vGs, b.vGs);
-    CopyVec(vvCs, b.vvCs);
+    this->CopyVec(vFs, b.vFs);
+    this->CopyVec(vGs, b.vGs);
+    this->CopyVec(vvCs, b.vvCs);
     vUpdates = b.vUpdates;
     vPfUpdates = b.vPfUpdates;
     vFoConeShared = b.vFoConeShared;
@@ -1013,16 +1014,16 @@ private: // Connectable condition
   inline bool TryConnect(int i, int i0, bool c0) {
     int f = (i0 << 1) ^ (int)c0;
     if(find(vvFis[i].begin(), vvFis[i].end(), f) == vvFis[i].end()) {
-      lit x = man->Or(man->LitNot(vFs[i]), vGs[i]);
-      IncRef(x);
-      if(man->IsConst1(man->Or(x, man->LitNotCond(vFs[i0], c0)))) {
-        DecRef(x);
+      lit x = this->man->Or(this->man->LitNot(vFs[i]), vGs[i]);
+      this->IncRef(x);
+      if(this->man->IsConst1(this->man->Or(x, this->man->LitNotCond(vFs[i0], c0)))) {
+        this->DecRef(x);
         if(nVerbose > 3)
           std::cout << "\t\t\tConnect " << i0 << "(" << c0 << ")" << std::endl;
         Connect(i, f, true);
         return true;
       }
-      DecRef(x);
+      this->DecRef(x);
     }
     return false;
   }
@@ -1033,7 +1034,7 @@ public: // Resubs
       std::cout << "Resubstitution" << std::endl;
     int count = fMspf? Mspf(true): Cspf(true);
     int nodes = CountNodes();
-    TransductionBackup b;
+    TransductionBackup<Man, lit, LitMax> b;
     Save(b);
     int count_ = count;
     std::list<int> targets = vObjs;
@@ -1113,7 +1114,7 @@ public: // Resubs
       if(vvFos[*it].empty())
         continue;
       count += TrivialMergeOne(*it);
-      TransductionBackup b;
+      TransductionBackup<Man, lit, LitMax> b;
       Save(b);
       int count_ = count;
       for(unsigned i = 0; i < vPis.size(); i++) {
@@ -1267,7 +1268,7 @@ public: // Optimization scripts
     return count;
   }
   int Optimize(bool fFirstMerge, bool fMspfMerge, bool fMspfResub, bool fInner, bool fOuter) {
-    TransductionBackup b;
+    TransductionBackup<Man, lit, LitMax> b;
     Save(b);
     int count = 0;
     int diff = 0;
@@ -1313,8 +1314,8 @@ private: // Setup
       vSlacks.resize(nObjsAlloc);
       vvFiSlacks.resize(nObjsAlloc);
     }
-    vFs.resize(nObjsAlloc, LitMax());
-    vGs.resize(nObjsAlloc, LitMax());
+    vFs.resize(nObjsAlloc, LitMax);
+    vGs.resize(nObjsAlloc, LitMax);
     vvCs.resize(nObjsAlloc);
     vUpdates.resize(nObjsAlloc);
     vPfUpdates.resize(nObjsAlloc);
@@ -1349,13 +1350,13 @@ private: // Setup
       int i0 = vvFis[vPos[i]][0] >> 1;
       lit c = vvCs[vPos[i]][0];
       if(i0) {
-        if(man->IsConst1(man->Or(LitFi(vPos[i], 0), c))) {
+        if(this->man->IsConst1(this->man->Or(LitFi(vPos[i], 0), c))) {
           if(nVerbose > 3)
             std::cout << "\t\t\tConst 1 output : po " << i << std::endl;
           Disconnect(vPos[i], i0, 0, false, false);
           Connect(vPos[i], 1, false, false, c);
           fRemoved |= vvFos[i0].empty();
-        } else if(man->IsConst1(man->Or(man->LitNot(LitFi(vPos[i], 0)), c))) {
+        } else if(this->man->IsConst1(this->man->Or(this->man->LitNot(LitFi(vPos[i], 0)), c))) {
           if(nVerbose > 3)
             std::cout << "\t\t\tConst 0 output : po " << i << std::endl;
           Disconnect(vPos[i], i0, 0, false, false);
@@ -1385,21 +1386,21 @@ public: // Constructor
     p.nReo = 4000;
     if(nSortType)
       p.fCountOnes = true;
-    man = new Man(aig.nPis, p);
+    this->man = new Man(aig.nPis, p);
     ImportAig(aig);
-    Update(vFs[0], man->Const0());
+    this->Update(vFs[0], this->man->Const0());
     for(unsigned i = 0; i < vPis.size(); i++)
-      Update(vFs[i + 1], man->IthVar(i));
+      this->Update(vFs[i + 1], this->man->IthVar(i));
     nMaxLevels = -1;
     Build(false);
-    man->Reorder();
-    man->TurnOffReo();
+    this->man->Reorder();
+    this->man->TurnOffReo();
     for(unsigned i = 0; i < vPos.size(); i++)
-      Update(vvCs[vPos[i]][0], man->Const0());
+      this->Update(vvCs[vPos[i]][0], this->man->Const0());
     RemoveConstOutputs();
-    vPoFs.resize(vPos.size(), LitMax());
+    vPoFs.resize(vPos.size(), LitMax);
     for(unsigned i = 0; i < vPos.size(); i++)
-      Update(vPoFs[i], LitFi(vPos[i], 0));
+      this->Update(vPoFs[i], LitFi(vPos[i], 0));
     state = PfState::none;
     if(nPiShuffle)
       ShufflePis(nPiShuffle);
@@ -1407,13 +1408,13 @@ public: // Constructor
       ComputeLevel();
   }
   ~Transduction() {
-    DelVec(vFs);
-    DelVec(vGs);
-    DelVec(vvCs);
-    DelVec(vPoFs);
-    //assert(man->CountNodes() == (int)vPis.size() + 1);
-    //assert(!man->Ref(man->Const0()));
-    delete man;
+    this->DelVec(vFs);
+    this->DelVec(vGs);
+    this->DelVec(vvCs);
+    this->DelVec(vPoFs);
+    //assert(this->man->CountNodes() == (int)vPis.size() + 1);
+    //assert(!this->man->Ref(this->man->Const0()));
+    delete this->man;
   }
 
 public:  // Output
@@ -1463,35 +1464,35 @@ public: // Debug and print
   }
   bool CspfDebug() {
     std::vector<lit> vGsOld;
-    CopyVec(vGsOld, vGs);
+    this->CopyVec(vGsOld, vGs);
     std::vector<std::vector<lit> > vvCsOld;
-    CopyVec(vvCsOld, vvCs);
+    this->CopyVec(vvCsOld, vvCs);
     state = PfState::none;
     Cspf(false);
-    bool r = LitVecIsEq(vGsOld, vGs) && LitVecIsEq(vvCsOld, vvCs);
-    DelVec(vGsOld);
-    DelVec(vvCsOld);
+    bool r = this->LitVecIsEq(vGsOld, vGs) && this->LitVecIsEq(vvCsOld, vvCs);
+    this->DelVec(vGsOld);
+    this->DelVec(vvCsOld);
     return r;
   }
   bool MspfDebug() {
     std::vector<lit> vGsOld;
-    CopyVec(vGsOld, vGs);
+    this->CopyVec(vGsOld, vGs);
     std::vector<std::vector<lit> > vvCsOld;
-    CopyVec(vvCsOld, vvCs);
+    this->CopyVec(vvCsOld, vvCs);
     state = PfState::none;
     Mspf(false);
-    bool r = LitVecIsEq(vGsOld, vGs) && LitVecIsEq(vvCsOld, vvCs);
-    DelVec(vGsOld);
-    DelVec(vvCsOld);
+    bool r = this->LitVecIsEq(vGsOld, vGs) && this->LitVecIsEq(vvCsOld, vvCs);
+    this->DelVec(vGsOld);
+    this->DelVec(vvCsOld);
     return r;
   }
   bool Verify() const {
     for(unsigned j = 0; j < vPos.size(); j++) {
-      lit x = Xor(LitFi(vPos[j], 0), vPoFs[j]);
-      IncRef(x);
-      Update(x, man->And(x, man->LitNot(vvCs[vPos[j]][0])));
-      DecRef(x);
-      if(!man->IsConst0(x))
+      lit x = this->Xor(LitFi(vPos[j], 0), vPoFs[j]);
+      this->IncRef(x);
+      this->Update(x, this->man->And(x, this->man->LitNot(vvCs[vPos[j]][0])));
+      this->DecRef(x);
+      if(!this->man->IsConst0(x))
         return false;
     }
     return true;

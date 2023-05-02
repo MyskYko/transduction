@@ -4,11 +4,16 @@
 #include <ctime>
 #include <cassert>
 
+#include <NextBdd.h>
+#include "ttman.h"
+using namespace Ttman;
+
 #include "Transduction.h"
 
 using namespace std;
 
-void Print(Transduction const & t, chrono::steady_clock::time_point const & start, int n) {
+template <class Tra>
+void Print(Tra const & t, chrono::steady_clock::time_point const & start, int n) {
   auto end = chrono::steady_clock::now();
   chrono::duration<double> elapsed_seconds = end - start;
   cout << "Test " << n << ": time = " << right << setw(10) << elapsed_seconds.count() << "s, ";
@@ -35,7 +40,7 @@ int main(int argc, char ** argv) {
   }
   cout << "};" << endl;
   aigman aig(argv[1]);
-  Transduction t(aig, 0, nSortType, nPiShuffle, fLevel);
+  Transduction<Man, Param, lit, 0xffffffff> t(aig, 0, nSortType, nPiShuffle, fLevel);
   int count = t.CountWires();
   int level = fLevel? t.CountLevels(): 0;
   auto start = chrono::steady_clock::now();
