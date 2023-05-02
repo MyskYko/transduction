@@ -60,7 +60,7 @@ int main(int argc, char ** argv) {
         assert(t.MspfDebug());
       break;
     case 2:
-      count -= fMspf? t.Mspf(true): t.Cspf(true);
+      count -= fMspf? t.Mspf(): t.Cspf();
       assert(fMspf? t.MspfDebug(): t.CspfDebug());
       break;
     case 3:
@@ -75,7 +75,7 @@ int main(int argc, char ** argv) {
       if(fLevel)
         break;
       count -= t.ResubShared(fMspf);
-      count -= fMspf? t.Mspf(true): t.Cspf(true);
+      count -= fMspf? t.Mspf(): t.Cspf();
       assert(fMspf? t.MspfDebug(): t.CspfDebug());
       break;
     default:
