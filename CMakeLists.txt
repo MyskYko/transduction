@@ -4,13 +4,12 @@ add_compile_options(-g -Wall -Wextra -Wpedantic -O3)
 
 add_subdirectory(lib)
 
-file(GLOB FILENAMES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-add_library(transduction ${FILENAMES})
-target_include_directories(transduction PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(transduction nextbdd aig)
+add_library(transduction INTERFACE)
+target_include_directories(transduction INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(transduction INTERFACE aig)
 
 add_executable(tra ${CMAKE_CURRENT_SOURCE_DIR}/test/tra.cpp)
-target_link_libraries(tra transduction)
+target_link_libraries(tra transduction nextbdd)
 
 add_executable(rantra ${CMAKE_CURRENT_SOURCE_DIR}/test/rantra.cpp)
-target_link_libraries(rantra transduction)
+target_link_libraries(rantra transduction nextbdd)
